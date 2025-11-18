@@ -1,0 +1,60 @@
+{% extends 'core/base.html' %}
+{% load static %}
+
+{% block title %}Controle de Estoque{% endblock %}
+
+{% block content %}
+<div class="header">
+    <h1>Estoque</h1>
+    <div>
+        <button class="btn btn-secondary">Lançar Reposição</button>
+        <button class="btn btn-primary">Cadastrar Novo Produto</button>
+    </div>
+</div>
+
+<div class="card">
+    <table class="tabela">
+        <thead>
+            <tr>
+                <th>ID</th>
+                <th>Nome do Produto</th>
+                <th>Preço Custo</th>
+                <th>Preço Venda</th>
+                <th>Qtd. Atual</th>
+                <th>Lucro/Unid.</th>
+                <th>Ações</th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr>
+                <td>1001</td>
+                <td>Mouse Óptico USB</td>
+                <td>R$ 25,00</td>
+                <td>R$ 45,00</td>
+                <td>50</td>
+                <td>R$ 20,00</td>
+                <td><a href="#">Editar</a></td>
+            </tr>
+            <tr>
+                <td>1002</td>
+                <td>Teclado ABNT2</td>
+                <td>R$ 60,00</td>
+                <td>R$ 110,00</td>
+                <td>30</td>
+                <td>R$ 50,00</td>
+                <td><a href="#">Editar</a></td>
+            </tr>
+            <tr>
+                <td>1003</td>
+                <td>Monitor LED 24"</td>
+                <td>R$ 700,00</td>
+                <td>R$ 950,00</td>
+                <td>15</td>
+                <td>R$ 250,00</td>
+                <td><a href="#">Editar</a></td>
+            </tr>
+        </tbody>
+    </table>
+</div>
+
+{% endblock %}

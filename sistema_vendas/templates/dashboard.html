@@ -1,0 +1,48 @@
+{% extends 'core/base.html' %}
+{% load static %}
+
+{% block title %}Dashboard{% endblock %}
+
+{% block content %}
+<div class="header">
+    <h1>Dashboard</h1>
+</div>
+
+<div class="stats-grid">
+    <div class="stat-card">
+        <h3>Receita Bruta (Mês)</h3>
+        <div class="valor">R$ 15.780,50</div>
+    </div>
+    <div class="stat-card">
+        <h3>Receita Líquida (Mês)</h3>
+        <div class="valor">R$ 12.120,00</div>
+    </div>
+    <div class="stat-card">
+        <h3>Vendas Realizadas (Mês)</h3>
+        <div class="valor">124</div>
+    </div>
+    <div class="stat-card">
+        <h3>Itens em Estoque</h3>
+        <div class="valor">1.890</div>
+    </div>
+</div>
+
+<div class="card">
+    <div class="chart-container">
+        <h3>Vendas por Dia (Últimos 30 dias)</h3>
+        <canvas id="graficoVendas"></canvas>
+    </div>
+</div>
+
+<div class="card" style="margin-top: 20px;">
+    <div class="chart-container">
+        <h3>Receita (Bruta vs. Líquida)</h3>
+        <canvas id="graficoReceita"></canvas>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script src="{% static 'js/charts.js' %}"></script>
+{% endblock %}

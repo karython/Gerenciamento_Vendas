@@ -1,0 +1,86 @@
+{% extends 'core/base.html' %}
+{% load static %}
+
+{% block title %}Nova Venda{% endblock %}
+
+{% block content %}
+<div class="header">
+    <h1>Nova Venda / Emissão de Nota</h1>
+</div>
+
+<form id="form-nova-venda" class="card">
+    <div class="form-row">
+        <div class="form-group" style="flex: 2;">
+            <label for="busca-cliente">Cliente</label>
+            <input type="text" id="busca-cliente" class="form-control" placeholder="Buscar por Nome ou CPF/CNPJ...">
+        </div>
+        <div class="form-group" style="flex: 2;">
+            <label for="busca-produto">Adicionar Produto</label>
+            <input type="text" id="busca-produto" class="form-control" placeholder="Buscar por ID ou Nome do Produto...">
+        </div>
+        <div class="form-group" style="flex: 1;">
+            <label for="qtd-produto">Quantidade</label>
+            <input type="number" id="qtd-produto" class="form-control" value="1">
+        </div>
+        <div class="form-group" style="align-self: flex-end;">
+            <button type="button" class="btn btn-success" onclick="adicionarProduto()">Adicionar</button>
+        </div>
+    </div>
+
+    <hr style="margin: 20px 0; border: 0; border-top: 1px solid var(--cor-borda);">
+
+    <h3>Itens da Venda</h3>
+    <table class="tabela" id="tabela-itens-venda">
+        <thead>
+            <tr>
+                <th>ID</th>
+                <th>Produto</th>
+                <th>Qtd.</th>
+                <th>Valor Unit.</th>
+                <th>Valor Total</th>
+                <th>Ação</th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr id="placeholder-carrinho" style="display: none;">
+                <td colspan="6" style="text-align: center; color: #777;">Nenhum produto adicionado</td>
+            </tr>
+        </tbody>
+        <tfoot>
+            <tr>
+                <td colspan="4" style="text-align: right; font-weight: bold;">Subtotal</td>
+                <td colspan="2" id="subtotal">R$ 0,00</td>
+            </tr>
+        </tfoot>
+    </table>
+
+    <hr style="margin: 20px 0; border: 0; border-top: 1px solid var(--cor-borda);">
+    
+    <div class="form-row">
+        <div class="form-group">
+            <label for="forma-pagamento">Forma de Pagamento</label>
+            <select id="forma-pagamento" class="form-control">
+                <option value="dinheiro">Dinheiro</option>
+                <option value="pix">Pix</option>
+                <option value="credito">Cartão de Crédito</option>
+                <option value="debito">Cartão de Débito</option>
+            </select>
+        </div>
+        <div class="form-group">
+            <label for="desconto">Desconto (R$)</label>
+            <input type="text" id="desconto" class="form-control" value="0,00">
+        </div>
+        <div class="form-group" style="font-size: 1.5em; align-self: flex-end;">
+            <strong>Total: <span id="valor-total">R$ 0,00</span></strong>
+        </div>
+    </div>
+
+    <div style="text-align: right; margin-top: 20px;">
+        <button type="submit" class="btn btn-primary">Finalizar Venda e Gerar PDF</button>
+    </div>
+</form>
+
+{% endblock %}
+
+{% block scripts %}
+{% endblock %}

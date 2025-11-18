@@ -1,0 +1,52 @@
+{% extends 'core/base.html' %}
+{% load static %}
+
+{% block title %}Histórico de Vendas{% endblock %}
+
+{% block content %}
+<div class="header">
+    <h1>Histórico de Vendas</h1>
+    <input type="date" class="form-control" style="width: 200px;">
+</div>
+
+<div class="card">
+    <table class="tabela">
+        <thead>
+            <tr>
+                <th>ID Venda</th>
+                <th>Data</th>
+                <th>Cliente</th>
+                <th>Valor Total</th>
+                <th>Forma Pgto.</th>
+                <th>Ações</th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr>
+                <td>V-00125</td>
+                <td>10/11/2025 14:30</td>
+                <td>Cliente Balcão</td>
+                <td>R$ 155,00</td>
+                <td>Pix</td>
+                <td><a href="#">Ver Detalhes</a> / <a href="#">Reimprimir</a></td>
+            </tr>
+            <tr>
+                <td>V-00124</td>
+                <td>10/11/2025 11:15</td>
+                <td>Empresa XYZ (Cliente)</td>
+                <td>R$ 1.900,00</td>
+                <td>Crédito (1x)</td>
+                <td><a href="#">Ver Detalhes</a> / <a href="#">Reimprimir</a></td>
+            </tr>
+            <tr>
+                <td>V-00123</td>
+                <td>09/11/2025 16:45</td>
+                <td>Maria Silva</td>
+                <td>R$ 45,00</td>
+                <td>Dinheiro</td>
+                <td><a href="#">Ver Detalhes</a> / <a href="#">Reimprimir</a></td>
+            </tr>
+        </tbody>
+    </table>
+</div>
+{% endblock %}

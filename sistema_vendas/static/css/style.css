@@ -1,4 +1,6 @@
 /* static/css/style.css */
+@import "media.css";
+@import "modais/modais.css";
 
 /* ----- Variáveis de Cor (Paleta de 3 cores + tons) ----- */
 :root {
@@ -254,42 +256,3 @@ body {
     padding: 20px;
 }
 
-/* ----- Responsividade ----- */
-@media (max-width: 900px) {
-    .sidebar {
-        width: 100%;
-        height: auto;
-        position: relative;
-        border-right: none;
-        border-bottom: 1px solid var(--cor-borda);
-    }
-    .main-content {
-        margin-left: 0;
-        width: 100%;
-        padding: 20px;
-    }
-    .form-row {
-        flex-direction: column;
-        gap: 0;
-    }
-    .stats-grid {
-        grid-template-columns: 1fr 1fr;
-    }
-}
-
-@media (max-width: 600px) {
-    .header {
-        flex-direction: column;
-        align-items: flex-start;
-        gap: 10px;
-    }
-    .stats-grid {
-        grid-template-columns: 1fr;
-    }
-    .tabela {
-        font-size: 14px;
-    }
-    .tabela th, .tabela td {
-        padding: 8px;
-    }
-}

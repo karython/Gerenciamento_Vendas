@@ -7,8 +7,8 @@
 <div class="header">
     <h1>Estoque</h1>
     <div>
-        <button class="btn btn-secondary">Lançar Reposição</button>
-        <button class="btn btn-primary">Cadastrar Novo Produto</button>
+        <button class="demo-btn" id="openReposicao">Lançar Reposição</button>
+        <button id="openNovoProduto" class="btn btn-primary">Cadastrar Novo Produto</button>
     </div>
 </div>
 
@@ -57,4 +57,136 @@
     </table>
 </div>
 
+<!-- Modal para cadastrar novo produto -->
+<div id="novoProdutoModal" class="modal-overlay" aria-hidden="true">
+    <div class="modal" role="dialog" aria-modal="true" aria-labelledby="novoProdutoTitle">
+        <div class="modal-header">
+            <h2 id="novoProdutoTitle">Cadastrar Novo Produto</h2>
+            <button class="close-btn" id="closeNovoProduto" aria-label="Fechar">×</button>
+        </div>
+        
+        <form id="formNovoProduto" method="post" action="">
+            {% csrf_token %}
+            <div class="modal-body">
+                <div class="form-group">
+                    <label for="nome_produto_novo">Nome do Produto</label>
+                    <input id="nome_produto_novo" name="nome" type="text" placeholder="Ex: Teclado Mecânico" required>
+                </div>
+
+                <div class="form-group">
+                    <label for="descricao_produto">Descrição</label>
+                    <textarea id="descricao_produto" name="descricao" rows="3" placeholder="Descrição do produto"></textarea>
+                </div>
+
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="valor_unitario">Valor Unitário (R$)</label>
+                        <input id="valor_unitario" name="valor_unitario" type="number" step="0.01" min="0" placeholder="0.00" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="iof">IOF (opcional %)</label>
+                        <input id="iof" name="iof" type="number" step="0.01" min="0" placeholder="0.00">
+                    </div>
+                </div>
+            </div>
+
+            <div class="modal-actions">
+                <button type="button" class="btn btn-secondary" id="cancelNovoProduto">Cancelar</button>
+                <button type="submit" class="btn btn-primary">Salvar Produto</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Modal de Reposição -->
+<div id="reposicaoModal" class="modal-overlay" aria-hidden="true">
+    <div class="modal" role="dialog" aria-modal="true" aria-labelledby="reposicaoTitle">
+        <div class="modal-header">
+            <h2 id="reposicaoTitle">Lançar Reposição de Estoque</h2>
+            <button class="close-btn" id="closeReposicao" aria-label="Fechar">×</button>
+        </div>
+
+        <form id="formReposicao">
+            <div class="modal-body">
+            
+               
+
+                <!-- Select de Produtos -->
+                <div class="form-group">
+                    <label for="select_produto">Selecionar Produto</label>
+                    <select id="select_produto" name="produto_id" required>
+                        <option value="">Selecione um produto...</option>
+                    </select>
+                </div>
+
+                <!-- Informações do Produto Selecionado -->
+                <div id="product_info" class="product-info">
+                    <h3 id="info_nome">-</h3>
+                    <p><strong>Código:</strong> <span id="info_codigo">-</span></p>
+                   
+                </div>
+
+                <!-- Campos do Formulário -->
+                <div class="form-group">
+                    <label for="nome_produto">Nome do Produto</label>
+                    <input 
+                        id="nome_produto" 
+                        type="text" 
+                        readonly
+                        placeholder="Selecione um produto acima"
+                    >
+                </div>
+
+                <div class="form-group">
+                    <label for="preco_custo">Preço de Custo Unitário (R$)</label>
+                    <input 
+                        id="preco_custo" 
+                        type="text" 
+                        readonly
+                        placeholder="0,00"
+                    >
+                </div>
+
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="preco_venda">Preço de Venda (R$) *</label>
+                        <input 
+                            id="preco_venda" 
+                            name="preco_venda"
+                            type="number" 
+                            step="0.01" 
+                            min="0"
+                            placeholder="0,00"
+                            required
+                        >
+                    </div>
+
+                    <div class="form-group">
+                        <label for="quantidade">Quantidade *</label>
+                        <input 
+                            id="quantidade" 
+                            name="quantidade"
+                            type="number" 
+                            min="1"
+                            step="1"
+                            placeholder="0"
+                            required
+                        >
+                    </div>
+                </div>
+            </div>
+
+            <div class="modal-actions">
+                <button type="button" class="btn btn-secondary" id="cancelReposicao">Cancelar</button>
+                <button type="submit" class="btn btn-primary">Confirmar Reposição</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+{% endblock %}
+
+{% block scripts %}
+<link rel="stylesheet" href="{% static 'css/modais/estoque.css' %}">
+<script src="{% static 'js/modais/estoque.js' %}"></script>
 {% endblock %}

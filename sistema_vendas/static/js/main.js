@@ -1,4 +1,5 @@
 // static/js/main.js
+import './modais/estoque.js';
 
 document.addEventListener("DOMContentLoaded", function() {
     

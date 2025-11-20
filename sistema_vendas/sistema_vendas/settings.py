@@ -37,7 +37,7 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
-    'controle'
+    'app_controle'
 ]
 
 MIDDLEWARE = [
@@ -115,7 +115,15 @@ USE_TZ = True
 # Static files (CSS, JavaScript, Images)
 # https://docs.djangoproject.com/en/5.2/howto/static-files/
 
-STATIC_URL = 'static/'
+# URL prefix for static files. Use a leading slash so paths are absolute.
+STATIC_URL = '/static/'
+
+# During development, also look for static files in the project-level `static/` folder
+from pathlib import Path as _Path
+STATICFILES_DIRS = [BASE_DIR / "static"]
+
+# Optional: directory used by `collectstatic` in production
+STATIC_ROOT = BASE_DIR / "staticfiles"
 
 # Default primary key field type
 # https://docs.djangoproject.com/en/5.2/ref/settings/#default-auto-field

@@ -103,7 +103,7 @@ AUTH_PASSWORD_VALIDATORS = [
 # Internationalization
 # https://docs.djangoproject.com/en/5.2/topics/i18n/
 
-LANGUAGE_CODE = 'en-us'
+LANGUAGE_CODE = 'pt-br'
 
 TIME_ZONE = 'UTC'
 
@@ -120,7 +120,7 @@ STATIC_URL = '/static/'
 
 # During development, also look for static files in the project-level `static/` folder
 from pathlib import Path as _Path
-STATICFILES_DIRS = [BASE_DIR / "static"]
+STATICFILES_DIRS = [BASE_DIR / 'app_controle' / 'static']
 
 # Optional: directory used by `collectstatic` in production
 STATIC_ROOT = BASE_DIR / "staticfiles"

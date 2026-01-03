@@ -1,9 +1,11 @@
-# app_controle/views.py
-from django.shortcuts import render, redirect, get_object_or_404
-from django.contrib import messages
-from django.http import JsonResponse
-from ..services.cliente_services import ClienteService
-from ..models import Cliente
+# app_controle/views/vendas_views.py
+
+from django.shortcuts import render
+from ..services.venda_services import VendaService
 
 def vendas(request):
-    return render(request, 'vendas.html')
+    """Lista todas as vendas do banco de dados"""
+    print("[VIEW] Carregando histórico de vendas...")
+    vendas_lista = VendaService.listar_vendas()
+    print(f"[VIEW] Total de vendas: {vendas_lista.count()}")
+    return render(request, 'vendas.html', {'vendas': vendas_lista})

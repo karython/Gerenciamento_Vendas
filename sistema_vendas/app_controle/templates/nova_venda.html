@@ -8,29 +8,43 @@
     <h1>Nova Venda / Emissão de Nota</h1>
 </div>
 
-<form id="form-nova-venda" class="card">
+<div class="card">
+<form id="form-nova-venda">
+
+    <!-- CLIENTE -->
     <div class="form-row">
         <div class="form-group" style="flex: 2;">
-            <label for="busca-cliente">Cliente</label>
-            <input type="text" id="busca-cliente" class="form-control" placeholder="Buscar por Nome ou CPF/CNPJ...">
+            <label for="cliente">Cliente *</label>
+            <select id="cliente" name="cliente_id" class="form-control" required>
+                <option value="">Buscar por Nome ou CPF/CNPJ...</option>
+            </select>
         </div>
+
+        <!-- PRODUTO -->
         <div class="form-group" style="flex: 2;">
-            <label for="busca-produto">Adicionar Produto</label>
-            <input type="text" id="busca-produto" class="form-control" placeholder="Buscar por ID ou Nome do Produto...">
+            <label for="produto">Produto *</label>
+            <select id="produto" class="form-control">
+                <option value="">Buscar por ID ou Nome do Produto...</option>
+            </select>
         </div>
+
+        <!-- QTD -->
         <div class="form-group" style="flex: 1;">
-            <label for="qtd-produto">Quantidade</label>
-            <input type="number" id="qtd-produto" class="form-control" value="1">
+            <label for="quantidade">Quantidade *</label>
+            <input type="number" id="quantidade" class="form-control" min="1" value="1">
         </div>
+
+        <!-- BOTÃO ADICIONAR -->
         <div class="form-group" style="align-self: flex-end;">
-            <button type="button" class="btn btn-success" onclick="adicionarProduto()">Adicionar</button>
+            <button type="button" id="btn-adicionar" class="btn btn-success">Adicionar</button>
         </div>
     </div>
 
-    <hr style="margin: 20px 0; border: 0; border-top: 1px solid var(--cor-borda);">
+    <hr style="margin: 25px 0;">
 
+    <!-- ITENS DA VENDA -->
     <h3>Itens da Venda</h3>
-    <table class="tabela" id="tabela-itens-venda">
+    <table class="tabela">
         <thead>
             <tr>
                 <th>ID</th>
@@ -41,9 +55,9 @@
                 <th>Ação</th>
             </tr>
         </thead>
-        <tbody>
-            <tr id="placeholder-carrinho" style="display: none;">
-                <td colspan="6" style="text-align: center; color: #777;">Nenhum produto adicionado</td>
+        <tbody id="itens-venda">
+            <tr id="linha-vazia">
+                <td colspan="6" style="text-align: center;">Nenhum item adicionado</td>
             </tr>
         </tbody>
         <tfoot>
@@ -54,10 +68,11 @@
         </tfoot>
     </table>
 
-    <hr style="margin: 20px 0; border: 0; border-top: 1px solid var(--cor-borda);">
-    
+    <hr style="margin: 25px 0;">
+
+    <!-- FORMA DE PAGAMENTO (mantida do primeiro código) -->
     <div class="form-row">
-        <div class="form-group">
+                <div class="form-group">
             <label for="forma-pagamento">Forma de Pagamento</label>
             <select id="forma-pagamento" class="form-control">
                 <option value="dinheiro">Dinheiro</option>
@@ -66,21 +81,330 @@
                 <option value="debito">Cartão de Débito</option>
             </select>
         </div>
-        <div class="form-group">
+
+
+        <div class="form-group" style="flex: 1;">
             <label for="desconto">Desconto (R$)</label>
-            <input type="text" id="desconto" class="form-control" value="0,00">
+            <input type="number" id="desconto" class="form-control" min="0" step="0.01" value="0.00">
         </div>
+
         <div class="form-group" style="font-size: 1.5em; align-self: flex-end;">
-            <strong>Total: <span id="valor-total">R$ 0,00</span></strong>
+            <strong>Total: <span id="total">R$ 0,00</span></strong>
         </div>
     </div>
 
     <div style="text-align: right; margin-top: 20px;">
-        <button type="submit" class="btn btn-primary">Finalizar Venda e Gerar PDF</button>
+        <button type="submit" class="btn btn-primary btn-large">Finalizar Venda e Gerar PDF</button>
     </div>
+
 </form>
+</div>
 
+<!-- ============================================= -->
+<!-- SCRIPTS DO PRIMEIRO CÓDIGO (completo e compatível) -->
+<!-- ============================================= -->
+<!-- Mantenha todo o HTML e CSS exatamente como está -->
+<!-- Apenas substitua a seção <script> por esta: -->
+
+<script>
+// Variáveis globais
+let itensVenda = [];
+let produtosDisponiveis = [];
+
+// Função para obter CSRF token
+function getCookie(name) {
+    let cookieValue = null;
+    if (document.cookie && document.cookie !== '') {
+        const cookies = document.cookie.split(';');
+        for (let i = 0; i < cookies.length; i++) {
+            const cookie = cookies[i].trim();
+            if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                break;
+            }
+        }
+    }
+    return cookieValue;
+}
+
+// Carregar clientes do banco
+async function carregarClientes() {
+    try {
+        console.log('🔄 Carregando clientes do banco...');
+        const response = await fetch("{% url 'buscar_clientes' %}");
+        const data = await response.json();
+        
+        if (data.success) {
+            const select = document.getElementById('cliente');
+            select.innerHTML = '<option value="">Selecione um cliente...</option>';
+            
+            data.clientes.forEach(cliente => {
+                const option = document.createElement('option');
+                option.value = cliente.id;
+                option.textContent = cliente.label;
+                select.appendChild(option);
+            });
+            
+            console.log(`✅ ${data.clientes.length} clientes carregados`);
+        }
+    } catch (error) {
+        console.error('❌ Erro ao carregar clientes:', error);
+        alert('Erro ao carregar clientes do banco de dados');
+    }
+}
+
+// Carregar produtos do estoque
+async function carregarProdutos() {
+    try {
+        console.log('🔄 Carregando produtos do estoque...');
+        const response = await fetch("{% url 'buscar_produtos' %}");
+        const data = await response.json();
+        
+        if (data.success) {
+            produtosDisponiveis = data.produtos;
+            const select = document.getElementById('produto');
+            select.innerHTML = '<option value="">Buscar por ID ou Nome do Produto...</option>';
+            
+            data.produtos.forEach(produto => {
+                const option = document.createElement('option');
+                option.value = produto.id;
+                option.textContent = produto.label;
+                option.dataset.valor = produto.valor;
+                option.dataset.estoque = produto.estoque;
+                option.dataset.descricao = produto.descricao;
+                select.appendChild(option);
+            });
+            
+            console.log(`✅ ${data.produtos.length} produtos carregados do estoque`);
+        }
+    } catch (error) {
+        console.error('❌ Erro ao carregar produtos:', error);
+        alert('Erro ao carregar produtos do estoque');
+    }
+}
+
+// Carregar formas de pagamento
+async function carregarFormasPagamento() {
+    try {
+        console.log('🔄 Carregando formas de pagamento...');
+        const response = await fetch("{% url 'buscar_formas_pagamento' %}");
+        const data = await response.json();
+        
+        if (data.success) {
+            const select = document.getElementById('forma-pagamento');
+            select.innerHTML = '<option value="">Dinheiro</option>';
+            
+            data.formas_pagamento.forEach(forma => {
+                const option = document.createElement('option');
+                option.value = forma.id;
+                option.textContent = forma.tipo;
+                select.appendChild(option);
+            });
+            
+            console.log(`✅ ${data.formas_pagamento.length} formas de pagamento carregadas`);
+        }
+    } catch (error) {
+        console.error('❌ Erro ao carregar formas de pagamento:', error);
+        alert('Erro ao carregar formas de pagamento');
+    }
+}
+
+// Adicionar item à venda
+document.getElementById('btn-adicionar').addEventListener('click', function() {
+    const produtoSelect = document.getElementById('produto');
+    const quantidadeInput = document.getElementById('quantidade');
+    
+    const produtoId = produtoSelect.value;
+    const quantidade = parseInt(quantidadeInput.value);
+    
+    if (!produtoId) {
+        alert('Selecione um produto do estoque');
+        return;
+    }
+    
+    if (!quantidade || quantidade < 1) {
+        alert('Informe uma quantidade válida');
+        return;
+    }
+    
+    const option = produtoSelect.options[produtoSelect.selectedIndex];
+    const estoque = parseInt(option.dataset.estoque);
+    
+    if (quantidade > estoque) {
+        alert(`❌ Estoque insuficiente! Disponível: ${estoque} unidades`);
+        return;
+    }
+    
+    // Verificar se produto já está na lista
+    const itemExistente = itensVenda.find(item => item.produto_id === parseInt(produtoId));
+    if (itemExistente) {
+        alert('Produto já adicionado! Remova-o primeiro para alterar a quantidade.');
+        return;
+    }
+    
+    const valorUnitario = parseFloat(option.dataset.valor);
+    const valorTotal = quantidade * valorUnitario;
+    
+    const item = {
+        produto_id: parseInt(produtoId),
+        descricao: option.dataset.descricao,
+        quantidade: quantidade,
+        valor_unitario: valorUnitario,
+        valor_total: valorTotal
+    };
+    
+    itensVenda.push(item);
+    console.log(`✅ Produto adicionado: ${item.descricao} x${quantidade}`);
+    atualizarTabelaItens();
+    
+    // Limpar campos
+    produtoSelect.value = '';
+    quantidadeInput.value = 1;
+});
+
+// Atualizar tabela de itens
+function atualizarTabelaItens() {
+    const tbody = document.getElementById('itens-venda');
+    
+    if (itensVenda.length === 0) {
+        tbody.innerHTML = '<tr id="linha-vazia"><td colspan="6" style="text-align: center;">Nenhum item adicionado</td></tr>';
+        document.getElementById('subtotal').textContent = 'R$ 0,00';
+        document.getElementById('total').textContent = 'R$ 0,00';
+        return;
+    }
+    
+    tbody.innerHTML = '';
+    let subtotal = 0;
+    
+    itensVenda.forEach((item, index) => {
+        subtotal += item.valor_total;
+        
+        const tr = document.createElement('tr');
+        tr.innerHTML = `
+            <td>${item.produto_id}</td>
+            <td>${item.descricao}</td>
+            <td>${item.quantidade}</td>
+            <td>R$ ${item.valor_unitario.toFixed(2)}</td>
+            <td>R$ ${item.valor_total.toFixed(2)}</td>
+            <td>
+                <button type="button" class="btn-remover" data-index="${index}" style="color: red; cursor: pointer; border: none; background: none; text-decoration: underline;">
+                    Remover
+                </button>
+            </td>
+        `;
+        tbody.appendChild(tr);
+    });
+    
+    document.getElementById('subtotal').textContent = `R$ ${subtotal.toFixed(2)}`;
+    calcularTotal();
+}
+
+// Remover item
+document.addEventListener('click', function(e) {
+    if (e.target.classList.contains('btn-remover')) {
+        const index = parseInt(e.target.dataset.index);
+        const item = itensVenda[index];
+        console.log(`🗑️ Removendo produto: ${item.descricao}`);
+        itensVenda.splice(index, 1);
+        atualizarTabelaItens();
+    }
+});
+
+// Calcular total com desconto
+function calcularTotal() {
+    const subtotal = itensVenda.reduce((sum, item) => sum + item.valor_total, 0);
+    const desconto = parseFloat(document.getElementById('desconto').value) || 0;
+    const total = subtotal - desconto;
+    
+    document.getElementById('total').textContent = `R$ ${total.toFixed(2)}`;
+}
+
+// Atualizar total quando desconto mudar
+document.getElementById('desconto').addEventListener('input', calcularTotal);
+
+// Finalizar venda
+document.getElementById('form-nova-venda').addEventListener('submit', async function(e) {
+    e.preventDefault();
+    
+    const clienteId = document.getElementById('cliente').value;
+    const formaPagamentoId = document.getElementById('forma-pagamento').value;
+    const desconto = parseFloat(document.getElementById('desconto').value) || 0;
+    
+    // Validações
+    if (!clienteId) {
+        alert('❌ Selecione um cliente');
+        return;
+    }
+    
+    if (itensVenda.length === 0) {
+        alert('❌ Adicione pelo menos um produto');
+        return;
+    }
+    
+    if (!formaPagamentoId) {
+        alert('❌ Selecione uma forma de pagamento');
+        return;
+    }
+    
+    // Confirmar venda
+    const totalVenda = itensVenda.reduce((sum, item) => sum + item.valor_total, 0) - desconto;
+    if (!confirm(`🛒 Confirmar venda no valor de R$ ${totalVenda.toFixed(2)}?\n\nO estoque será atualizado automaticamente.`)) {
+        return;
+    }
+    
+    // Enviar dados
+    try {
+        const csrfToken = getCookie('csrftoken');
+        
+        const dados = {
+            cliente_id: parseInt(clienteId),
+            forma_pagamento_id: parseInt(formaPagamentoId),
+            desconto: desconto,
+            itens: itensVenda
+        };
+        
+        console.log('📤 Enviando venda:', dados);
+        
+        const response = await fetch("{% url 'criar_venda' %}", {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': csrfToken
+            },
+            body: JSON.stringify(dados)
+        });
+        
+        const result = await response.json();
+        
+        if (result.success) {
+            console.log('✅ Venda finalizada:', result);
+            alert('✅ ' + result.message + '\n\n📦 Estoque atualizado automaticamente!');
+            
+            // Fazer download do PDF
+            window.open(`/vendas/pdf/${result.venda_id}/`, '_blank');
+            
+            // Redirecionar após 1 segundo
+            setTimeout(() => {
+                window.location.href = "{% url 'vendas' %}";
+            }, 1000);
+        } else {
+            console.error('❌ Erro:', result.message);
+            alert('❌ Erro: ' + result.message);
+        }
+        
+    } catch (error) {
+        console.error('❌ Erro ao finalizar venda:', error);
+        alert('❌ Erro ao finalizar venda. Verifique o console.');
+    }
+});
+
+// Carregar dados ao iniciar a página
+document.addEventListener('DOMContentLoaded', function() {
+    console.log('🚀 Iniciando sistema de vendas...');
+    carregarClientes();
+    carregarProdutos();
+    carregarFormasPagamento();
+});
+</script>
 {% endblock %}
 
-{% block scripts %}
-{% endblock %}

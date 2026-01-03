@@ -1,4 +1,5 @@
 # sistema_vendas/urls.py
+
 from django.contrib import admin
 from django.urls import path
 from app_controle.views import (
@@ -13,26 +14,34 @@ from app_controle.views import (
 
 urlpatterns = [
     path('admin/', admin.site.urls),
-    
-    # Página inicial
     path('', home_views.home, name='home'),
-    
-    # Dashboard
     path('dashboard/', dashboard_views.dashboard, name='dashboard'),
     
-    # Clientes
+    # === ESTOQUE === (ordem importa!)
+    path('estoque/', estoque_views.estoque, name='estoque'),
+    path('estoque/cadastrar/', estoque_views.cadastrar_produto, name='cadastrar_produto'),
+    path('estoque/buscar/<int:produto_id>/', estoque_views.buscar_produto_ajax, name='buscar_produto_ajax'),  # ← ADICIONAR
+    path('estoque/editar/<int:produto_id>/', estoque_views.editar_produto, name='editar_produto'),
+    path('estoque/deletar/<int:produto_id>/', estoque_views.deletar_produto, name='deletar_produto'),  # ← ADICIONAR
+    path('estoque/reposicao/<int:produto_id>/', estoque_views.adicionar_reposicao, name='adicionar_reposicao'),
+    
+    # === VENDAS ===
+    path('vendas/', vendas_views.vendas, name='vendas'),
+    path('vendas/nova/', novavenda_views.nova_venda, name='nova_venda'),
+    path('vendas/criar/', novavenda_views.criar_venda, name='criar_venda'),
+    path('vendas/pdf/<int:venda_id>/', novavenda_views.gerar_pdf_venda, name='gerar_pdf_venda'),
+    
+    # === APIs ===
+    path('api/clientes/', novavenda_views.buscar_clientes, name='buscar_clientes'),
+    path('api/produtos/', novavenda_views.buscar_produtos, name='buscar_produtos'),
+    path('api/formas-pagamento/', novavenda_views.buscar_formas_pagamento, name='buscar_formas_pagamento'),
+    
+    # === CLIENTES ===
     path('clientes/', cliente_views.listar_clientes, name='clientes'),
     path('clientes/criar/', cliente_views.criar_cliente, name='criar_cliente'),
     path('clientes/editar/<int:id>/', cliente_views.editar_cliente, name='editar_cliente'),
     path('clientes/deletar/<int:id>/', cliente_views.deletar_cliente, name='deletar_cliente'),
     
-    # Estoque
-    path('estoque/', estoque_views.estoque, name='estoque'),
-    
-    # Vendas
-    path('vendas/', vendas_views.vendas, name='vendas'),
-    path('vendas/nova/', novavenda_views.nova_venda, name='nova_venda'),
-    
-    # Logout
+    # === LOGOUT ===
     path('logout/', logout_views.logout, name='logout'),
 ]

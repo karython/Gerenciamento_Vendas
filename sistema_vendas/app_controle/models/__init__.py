@@ -1,3 +1,4 @@
+# app_controle/models/__init__.py
 from .funcionario import Funcionario
 from .cliente import Cliente
 from .uf import UF
@@ -5,8 +6,9 @@ from .cidades import Cidades
 from .endereco import Endereco
 from .produto import Produto
 from .estoque import Estoque
-from .venda import Venda
 from .pagamento import Pagamento
+from .venda import Venda
+from .item_venda import ItemVenda  # ← ADICIONAR
 from .estoque_venda import EstoqueVenda
 from .usuario import Usuario
 
@@ -18,8 +20,9 @@ __all__ = [
     'Endereco',
     'Produto',
     'Estoque',
-    'Venda',
     'Pagamento',
+    'Venda',
+    'ItemVenda',  # ← ADICIONAR
     'EstoqueVenda',
     'Usuario',
 ]

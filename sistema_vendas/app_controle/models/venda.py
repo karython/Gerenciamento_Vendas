@@ -1,16 +1,26 @@
+# app_controle/models/venda.py
 from django.db import models
 from .cliente import Cliente
+from .pagamento import Pagamento
 
 class Venda(models.Model):
     idVENDA = models.AutoField(primary_key=True)
     CLIENTE_idCLIENTE = models.ForeignKey(
         Cliente,
         on_delete=models.PROTECT,
-        db_column='CLIENTE_idCLIENTE'
+        db_column='CLIENTE_idCLIENTE',
+        related_name='vendas'
     )
-    PAGAMENTO_idPAGAMENTO = models.IntegerField()
-    QTD_VENDIDA = models.IntegerField()
-    DT_VENDA = models.DateTimeField()
+    PAGAMENTO_idPAGAMENTO = models.ForeignKey(
+        Pagamento,
+        on_delete=models.PROTECT,
+        db_column='PAGAMENTO_idPAGAMENTO',
+        related_name='vendas'
+    )
+    QTD_VENDIDA = models.IntegerField(default=0)
+    DT_VENDA = models.DateTimeField(auto_now_add=True)
+    VLR_SUBTOTAL = models.DecimalField(max_digits=10, decimal_places=2, default=0.00)
+    DESCONTO = models.DecimalField(max_digits=10, decimal_places=2, default=0.00)
     VLR_TOTAL = models.DecimalField(max_digits=10, decimal_places=2)
 
     class Meta:

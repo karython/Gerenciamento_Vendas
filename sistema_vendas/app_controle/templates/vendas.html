@@ -4,13 +4,16 @@
 {% block title %}Histórico de Vendas{% endblock %}
 
 {% block content %}
-<div class="header">
+<div class="header-vendas">
     <h1>Histórico de Vendas</h1>
-    <input type="date" class="form-control" style="width: 200px;">
+    <div class="header-right">
+        <input type="date" id="filtro-data" class="input-data">
+        <button class="btn-calendario">📅</button>
+    </div>
 </div>
 
-<div class="card">
-    <table class="tabela">
+<div class="card-vendas">
+    <table class="tabela-vendas">
         <thead>
             <tr>
                 <th>ID Venda</th>
@@ -22,31 +25,285 @@
             </tr>
         </thead>
         <tbody>
+            {% for venda in vendas %}
             <tr>
-                <td>V-00125</td>
-                <td>10/11/2025 14:30</td>
-                <td>Cliente Balcão</td>
-                <td>R$ 155,00</td>
-                <td>Pix</td>
-                <td><a href="#">Ver Detalhes</a> / <a href="#">Reimprimir</a></td>
+                <td>V-{{ venda.idVENDA|stringformat:"05d" }}</td>
+                <td>{{ venda.DT_VENDA|date:"d/m/Y H:i" }}</td>
+                <td>{{ venda.CLIENTE_idCLIENTE.NOME_CLIENTE }}</td>
+                <td>R$ {{ venda.VLR_TOTAL|floatformat:2 }}</td>
+                <td>{{ venda.PAGAMENTO_idPAGAMENTO.TP_PAGAMENTO }}</td>
+                <td>
+                    <a href="#" class="link-acao" onclick="verDetalhes({{ venda.idVENDA }}); return false;">Ver Detalhes</a>
+                    /
+                    <a href="{% url 'gerar_pdf_venda' venda.idVENDA %}" class="link-acao" target="_blank">Reimprimir</a>
+                </td>
             </tr>
+            {% empty %}
             <tr>
-                <td>V-00124</td>
-                <td>10/11/2025 11:15</td>
-                <td>Empresa XYZ (Cliente)</td>
-                <td>R$ 1.900,00</td>
-                <td>Crédito (1x)</td>
-                <td><a href="#">Ver Detalhes</a> / <a href="#">Reimprimir</a></td>
+                <td colspan="6" style="text-align: center; padding: 30px;">
+                    Nenhuma venda registrada
+                </td>
             </tr>
-            <tr>
-                <td>V-00123</td>
-                <td>09/11/2025 16:45</td>
-                <td>Maria Silva</td>
-                <td>R$ 45,00</td>
-                <td>Dinheiro</td>
-                <td><a href="#">Ver Detalhes</a> / <a href="#">Reimprimir</a></td>
-            </tr>
+            {% endfor %}
         </tbody>
     </table>
 </div>
+
+<!-- Modal Ver Detalhes -->
+<div id="modal-detalhes" class="modal-overlay" style="display: none;">
+    <div class="modal-box">
+        <div class="modal-header">
+            <h2>Detalhes da Venda</h2>
+            <button class="btn-fechar" onclick="fecharModal()">&times;</button>
+        </div>
+        <div id="modal-content" class="modal-body">
+            <p>Carregando...</p>
+        </div>
+    </div>
+</div>
+
+<script>
+function verDetalhes(vendaId) {
+    console.log('Ver detalhes da venda:', vendaId);
+    
+    // Buscar detalhes da venda
+    {% for venda in vendas %}
+    if ({{ venda.idVENDA }} === vendaId) {
+        const html = `
+            <div class="detalhes-venda">
+                <p><strong>ID Venda:</strong> V-{{ venda.idVENDA|stringformat:"05d" }}</p>
+                <p><strong>Data:</strong> {{ venda.DT_VENDA|date:"d/m/Y H:i" }}</p>
+                <p><strong>Cliente:</strong> {{ venda.CLIENTE_idCLIENTE.NOME_CLIENTE }}</p>
+                <p><strong>CPF:</strong> {{ venda.CLIENTE_idCLIENTE.CPF }}</p>
+                <p><strong>Telefone:</strong> {{ venda.CLIENTE_idCLIENTE.TELEFONE }}</p>
+                <hr>
+                <p><strong>Quantidade de Itens:</strong> {{ venda.QTD_VENDIDA }}</p>
+                <p><strong>Valor Total:</strong> R$ {{ venda.VLR_TOTAL|floatformat:2 }}</p>
+                <p><strong>Forma de Pagamento:</strong> {{ venda.PAGAMENTO_idPAGAMENTO.TP_PAGAMENTO }}</p>
+                <hr>
+                <div style="text-align: center; margin-top: 20px;">
+                    <a href="{% url 'gerar_pdf_venda' venda.idVENDA %}" 
+                       class="btn-download" 
+                       target="_blank">
+                        📄 Baixar Nota Fiscal
+                    </a>
+                </div>
+            </div>
+        `;
+        
+        document.getElementById('modal-content').innerHTML = html;
+        document.getElementById('modal-detalhes').style.display = 'flex';
+        return;
+    }
+    {% endfor %}
+}
+
+function fecharModal() {
+    document.getElementById('modal-detalhes').style.display = 'none';
+}
+
+// Fechar modal ao clicar fora
+document.getElementById('modal-detalhes').addEventListener('click', function(e) {
+    if (e.target === this) {
+        fecharModal();
+    }
+});
+
+// Filtro de data
+document.getElementById('filtro-data').addEventListener('change', function() {
+    const dataFiltro = this.value;
+    console.log('Filtrar por data:', dataFiltro);
+    // Implementar filtro se necessário
+});
+</script>
+
+<style>
+.header-vendas {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 20px;
+}
+
+.header-vendas h1 {
+    font-size: 24px;
+    color: #333;
+    margin: 0;
+}
+
+.header-right {
+    display: flex;
+    gap: 10px;
+    align-items: center;
+}
+
+.input-data {
+    padding: 8px 12px;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+    font-size: 14px;
+}
+
+.btn-calendario {
+    padding: 8px 15px;
+    background: white;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 16px;
+}
+
+.btn-calendario:hover {
+    background: #f5f5f5;
+}
+
+.card-vendas {
+    background: white;
+    border-radius: 8px;
+    padding: 20px;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+.tabela-vendas {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+.tabela-vendas thead th {
+    background: #f8f9fa;
+    padding: 12px;
+    text-align: left;
+    font-weight: 600;
+    border-bottom: 2px solid #dee2e6;
+    color: #495057;
+}
+
+.tabela-vendas tbody td {
+    padding: 12px;
+    border-bottom: 1px solid #dee2e6;
+}
+
+.tabela-vendas tbody tr:hover {
+    background: #f8f9fa;
+}
+
+.link-acao {
+    color: #007bff;
+    text-decoration: none;
+}
+
+.link-acao:hover {
+    text-decoration: underline;
+}
+
+/* Modal */
+.modal-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.5);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 1000;
+}
+
+.modal-box {
+    background: white;
+    border-radius: 8px;
+    width: 90%;
+    max-width: 600px;
+    max-height: 80vh;
+    overflow-y: auto;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+}
+
+.modal-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 20px;
+    border-bottom: 1px solid #dee2e6;
+}
+
+.modal-header h2 {
+    margin: 0;
+    font-size: 20px;
+    color: #333;
+}
+
+.btn-fechar {
+    background: none;
+    border: none;
+    font-size: 28px;
+    color: #999;
+    cursor: pointer;
+    line-height: 1;
+}
+
+.btn-fechar:hover {
+    color: #333;
+}
+
+.modal-body {
+    padding: 20px;
+}
+
+.detalhes-venda p {
+    margin: 10px 0;
+    font-size: 14px;
+}
+
+.detalhes-venda hr {
+    margin: 15px 0;
+    border: none;
+    border-top: 1px solid #dee2e6;
+}
+
+.btn-download {
+    display: inline-block;
+    padding: 10px 20px;
+    background: #007bff;
+    color: white;
+    text-decoration: none;
+    border-radius: 4px;
+    font-weight: 500;
+}
+
+.btn-download:hover {
+    background: #0056b3;
+}
+</style>
 {% endblock %}
+```
+
+## 5. Testar o Fluxo Completo
+
+### Passo 1: Criar Formas de Pagamento
+Execute o código do shell que mostrei no início.
+
+### Passo 2: Fazer uma Venda
+1. Acesse `/vendas/nova/`
+2. Selecione um cliente
+3. Adicione produtos
+4. **Selecione uma forma de pagamento** (agora deve aparecer as opções!)
+5. Clique em "Finalizar Venda e Gerar PDF"
+6. O PDF deve baixar automaticamente
+
+### Passo 3: Ver Histórico
+1. Acesse `/vendas/`
+2. Veja a venda cadastrada
+3. Clique em "Ver Detalhes" → Modal abre
+4. Clique em "Reimprimir" → Baixa o PDF novamente
+
+## 6. Logs Esperados
+```
+[VIEW] Carregando histórico de vendas...
+[VIEW] Total de vendas: 3
+[07/Dec/2025 14:00:00] "GET /vendas/ HTTP/1.1" 200 5432
+
+[PDF] Gerando nota fiscal para venda #1
+[PDF] ✅ Nota fiscal V-00001 gerada com sucesso!
+[07/Dec/2025 14:01:00] "GET /vendas/pdf/1/ HTTP/1.1" 200 8543

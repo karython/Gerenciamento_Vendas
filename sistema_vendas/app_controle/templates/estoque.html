@@ -1,14 +1,14 @@
 {% extends 'core/base.html' %}
 {% load static %}
 
-{% block title %}Controle de Estoque{% endblock %}
+{% block title %}Estoque{% endblock %}
 
 {% block content %}
 <div class="header">
     <h1>Estoque</h1>
     <div>
-        <button class="demo-btn" id="openReposicao">Lançar Reposição</button>
-        <button id="openNovoProduto" class="btn btn-primary">Cadastrar Novo Produto</button>
+        <button id="btn-lancar-reposicao" class="btn btn-secondary" style="margin-right: 10px;">Lançar Reposição</button>
+        <button id="btn-cadastrar-produto" class="btn btn-primary">Cadastrar Novo Produto</button>
     </div>
 </div>
 
@@ -25,168 +25,412 @@
                 <th>Ações</th>
             </tr>
         </thead>
-        <tbody>
-            <tr>
-                <td>1001</td>
-                <td>Mouse Óptico USB</td>
-                <td>R$ 25,00</td>
-                <td>R$ 45,00</td>
-                <td>50</td>
-                <td>R$ 20,00</td>
-                <td><a href="#">Editar</a></td>
+        <tbody id="tabela-estoque">
+            {% for item in estoques %}
+            <tr data-produto-id="{{ item.produto_id }}">
+                <td>{{ item.PRODUTO_idPRODUTO.idPRODUTO }}</td>
+                <td>{{ item.nome }}</td>
+                <td>R$ {{ item.preco_custo|floatformat:2 }}</td>
+                <td>R$ {{ item.preco_venda|floatformat:2 }}</td>
+                <td class="quantidade">{{ item.quantidade }}</td>
+                <td>R$ {{ item.lucro_unitario|floatformat:2 }}</td>
+                <td>
+                    <a href="#" class="btn-editar" data-id="{{ item.produto_id }}">Editar</a>
+                    <a href="#" class="btn-deletar" data-id="{{ item.produto_id }}" style="color: red; margin-left: 10px;">Deletar</a>
+                </td>
             </tr>
-            <tr>
-                <td>1002</td>
-                <td>Teclado ABNT2</td>
-                <td>R$ 60,00</td>
-                <td>R$ 110,00</td>
-                <td>30</td>
-                <td>R$ 50,00</td>
-                <td><a href="#">Editar</a></td>
+            {% empty %}
+            <tr id="linha-vazia">
+                <td colspan="7" style="text-align: center;">Nenhum produto cadastrado</td>
             </tr>
-            <tr>
-                <td>1003</td>
-                <td>Monitor LED 24"</td>
-                <td>R$ 700,00</td>
-                <td>R$ 950,00</td>
-                <td>15</td>
-                <td>R$ 250,00</td>
-                <td><a href="#">Editar</a></td>
-            </tr>
+            {% endfor %}
         </tbody>
     </table>
 </div>
 
-<!-- Modal para cadastrar novo produto -->
-<div id="novoProdutoModal" class="modal-overlay" aria-hidden="true">
-    <div class="modal" role="dialog" aria-modal="true" aria-labelledby="novoProdutoTitle">
-        <div class="modal-header">
-            <h2 id="novoProdutoTitle">Cadastrar Novo Produto</h2>
-            <button class="close-btn" id="closeNovoProduto" aria-label="Fechar">×</button>
-        </div>
-        
-        <form id="formNovoProduto" method="post" action="">
+<!-- Modal Cadastrar Produto -->
+<div id="modal-cadastrar" class="modal">
+    <div class="modal-content">
+        <span class="close" data-modal="cadastrar">&times;</span>
+        <h2>Cadastrar Novo Produto</h2>
+        <form id="form-cadastrar-produto">
             {% csrf_token %}
-            <div class="modal-body">
+            <div class="form-group">
+                <label for="nome-produto">Nome do Produto *</label>
+                <input type="text" id="nome-produto" class="form-control" required>
+            </div>
+            <div class="form-row">
                 <div class="form-group">
-                    <label for="nome_produto_novo">Nome do Produto</label>
-                    <input id="nome_produto_novo" name="nome" type="text" placeholder="Ex: Teclado Mecânico" required>
+                    <label for="preco-custo">Preço de Custo</label>
+                    <input type="number" id="preco-custo" class="form-control" step="0.01" min="0" value="0">
                 </div>
-
                 <div class="form-group">
-                    <label for="descricao_produto">Descrição</label>
-                    <textarea id="descricao_produto" name="descricao" rows="3" placeholder="Descrição do produto"></textarea>
-                </div>
-
-                <div class="form-row">
-                    <div class="form-group">
-                        <label for="valor_unitario">Valor Unitário (R$)</label>
-                        <input id="valor_unitario" name="valor_unitario" type="number" step="0.01" min="0" placeholder="0.00" required>
-                    </div>
-                    <div class="form-group">
-                        <label for="iof">IOF (opcional %)</label>
-                        <input id="iof" name="iof" type="number" step="0.01" min="0" placeholder="0.00">
-                    </div>
+                    <label for="preco-venda">Preço de Venda *</label>
+                    <input type="number" id="preco-venda" class="form-control" step="0.01" min="0" required>
                 </div>
             </div>
-
-            <div class="modal-actions">
-                <button type="button" class="btn btn-secondary" id="cancelNovoProduto">Cancelar</button>
-                <button type="submit" class="btn btn-primary">Salvar Produto</button>
+            <div class="form-group">
+                <label for="quantidade-inicial">Quantidade Inicial *</label>
+                <input type="number" id="quantidade-inicial" class="form-control" min="0" value="0" required>
             </div>
+            <button type="submit" class="btn btn-primary">Salvar Produto</button>
         </form>
     </div>
 </div>
 
-<!-- Modal de Reposição -->
-<div id="reposicaoModal" class="modal-overlay" aria-hidden="true">
-    <div class="modal" role="dialog" aria-modal="true" aria-labelledby="reposicaoTitle">
-        <div class="modal-header">
-            <h2 id="reposicaoTitle">Lançar Reposição de Estoque</h2>
-            <button class="close-btn" id="closeReposicao" aria-label="Fechar">×</button>
-        </div>
+<!-- Modal Editar Produto -->
+<div id="modal-editar" class="modal">
+    <div class="modal-content">
+        <span class="close" data-modal="editar">&times;</span>
+        <h2>Editar Produto</h2>
+        <form id="form-editar-produto">
+            {% csrf_token %}
+            <input type="hidden" id="edit-produto-id">
+            <div class="form-group">
+                <label for="edit-nome-produto">Nome do Produto *</label>
+                <input type="text" id="edit-nome-produto" class="form-control" required>
+            </div>
+            <div class="form-row">
+                <div class="form-group">
+                    <label for="edit-preco-custo">Preço de Custo</label>
+                    <input type="number" id="edit-preco-custo" class="form-control" step="0.01" min="0">
+                </div>
+                <div class="form-group">
+                    <label for="edit-preco-venda">Preço de Venda *</label>
+                    <input type="number" id="edit-preco-venda" class="form-control" step="0.01" min="0" required>
+                </div>
+            </div>
+            <div class="form-group">
+                <label for="edit-quantidade">Quantidade Atual *</label>
+                <input type="number" id="edit-quantidade" class="form-control" min="0" required>
+            </div>
+            <button type="submit" class="btn btn-primary">Salvar Alterações</button>
+        </form>
+    </div>
+</div>
 
-        <form id="formReposicao">
-            <div class="modal-body">
+<!-- Modal Lançar Reposição -->
+<div id="modal-reposicao" class="modal">
+    <div class="modal-content">
+        <span class="close" data-modal="reposicao">&times;</span>
+        <h2>Lançar Reposição</h2>
+        <form id="form-reposicao">
+            {% csrf_token %}
+            <div class="form-group">
+                <label for="produto-reposicao">Selecione o Produto *</label>
+                <select id="produto-reposicao" class="form-control" required>
+                    <option value="">Selecione...</option>
+                    {% for item in estoques %}
+                    <option value="{{ item.produto_id }}">{{ item.nome }} (Atual: {{ item.quantidade }})</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="form-group">
+                <label for="quantidade-reposicao">Quantidade a Adicionar *</label>
+                <input type="number" id="quantidade-reposicao" class="form-control" min="1" required>
+            </div>
+            <button type="submit" class="btn btn-success">Adicionar ao Estoque</button>
+        </form>
+    </div>
+</div>
+
+<script>
+function getCookie(name) {
+    let cookieValue = null;
+    if (document.cookie && document.cookie !== '') {
+        const cookies = document.cookie.split(';');
+        for (let i = 0; i < cookies.length; i++) {
+            const cookie = cookies[i].trim();
+            if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                break;
+            }
+        }
+    }
+    return cookieValue;
+}
+
+// Modais
+const modalCadastrar = document.getElementById('modal-cadastrar');
+const modalEditar = document.getElementById('modal-editar');
+const modalReposicao = document.getElementById('modal-reposicao');
+const btnCadastrar = document.getElementById('btn-cadastrar-produto');
+const btnReposicao = document.getElementById('btn-lancar-reposicao');
+const closeBtns = document.querySelectorAll('.close');
+
+btnCadastrar.onclick = () => modalCadastrar.style.display = 'block';
+btnReposicao.onclick = () => modalReposicao.style.display = 'block';
+
+closeBtns.forEach(btn => {
+    btn.onclick = function() {
+        const modal = this.dataset.modal;
+        if (modal === 'cadastrar') modalCadastrar.style.display = 'none';
+        if (modal === 'editar') modalEditar.style.display = 'none';
+        if (modal === 'reposicao') modalReposicao.style.display = 'none';
+    }
+});
+
+window.onclick = (e) => {
+    if (e.target == modalCadastrar) modalCadastrar.style.display = 'none';
+    if (e.target == modalEditar) modalEditar.style.display = 'none';
+    if (e.target == modalReposicao) modalReposicao.style.display = 'none';
+}
+
+// Cadastrar Produto
+document.getElementById('form-cadastrar-produto').addEventListener('submit', async function(e) {
+    e.preventDefault();
+    
+    const dados = {
+        nome: document.getElementById('nome-produto').value,
+        preco_custo: parseFloat(document.getElementById('preco-custo').value) || 0,
+        preco_venda: parseFloat(document.getElementById('preco-venda').value),
+        quantidade_inicial: parseInt(document.getElementById('quantidade-inicial').value)
+    };
+    
+    try {
+        const response = await fetch("{% url 'cadastrar_produto' %}", {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': getCookie('csrftoken')
+            },
+            body: JSON.stringify(dados)
+        });
+        
+        const result = await response.json();
+        
+        if (result.success) {
+            alert(result.message);
+            location.reload();
+        } else {
+            alert('Erro: ' + result.message);
+        }
+    } catch (error) {
+        console.error('Erro:', error);
+        alert('Erro ao cadastrar produto');
+    }
+});
+
+// Editar Produto - Abrir Modal
+document.addEventListener('click', async function(e) {
+    if (e.target.classList.contains('btn-editar')) {
+        e.preventDefault();
+        const produtoId = e.target.dataset.id;
+        
+        try {
+            const response = await fetch(`/estoque/buscar/${produtoId}/`);
+            const result = await response.json();
             
-               
+            if (result.success) {
+                document.getElementById('edit-produto-id').value = produtoId;
+                document.getElementById('edit-nome-produto').value = result.produto.nome;
+                document.getElementById('edit-preco-custo').value = result.produto.preco_custo;
+                document.getElementById('edit-preco-venda').value = result.produto.preco_venda;
+                document.getElementById('edit-quantidade').value = result.produto.quantidade;
+                
+                modalEditar.style.display = 'block';
+            }
+        } catch (error) {
+            console.error('Erro:', error);
+            alert('Erro ao buscar dados do produto');
+        }
+    }
+});
 
-                <!-- Select de Produtos -->
-                <div class="form-group">
-                    <label for="select_produto">Selecionar Produto</label>
-                    <select id="select_produto" name="produto_id" required>
-                        <option value="">Selecione um produto...</option>
-                    </select>
-                </div>
+// Editar Produto - Salvar
+document.getElementById('form-editar-produto').addEventListener('submit', async function(e) {
+    e.preventDefault();
+    
+    const produtoId = document.getElementById('edit-produto-id').value;
+    const dados = {
+        nome: document.getElementById('edit-nome-produto').value,
+        preco_custo: parseFloat(document.getElementById('edit-preco-custo').value),
+        preco_venda: parseFloat(document.getElementById('edit-preco-venda').value),
+        quantidade: parseInt(document.getElementById('edit-quantidade').value)
+    };
+    
+    try {
+        const response = await fetch(`/estoque/editar/${produtoId}/`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': getCookie('csrftoken')
+            },
+            body: JSON.stringify(dados)
+        });
+        
+        const result = await response.json();
+        
+        if (result.success) {
+            alert(result.message);
+            location.reload();
+        } else {
+            alert('Erro: ' + result.message);
+        }
+    } catch (error) {
+        console.error('Erro:', error);
+        alert('Erro ao editar produto');
+    }
+});
 
-                <!-- Informações do Produto Selecionado -->
-                <div id="product_info" class="product-info">
-                    <h3 id="info_nome">-</h3>
-                    <p><strong>Código:</strong> <span id="info_codigo">-</span></p>
-                   
-                </div>
+// Deletar Produto
+document.addEventListener('click', async function(e) {
+    if (e.target.classList.contains('btn-deletar')) {
+        e.preventDefault();
+        
+        if (!confirm('Tem certeza que deseja deletar este produto do estoque?')) {
+            return;
+        }
+        
+        const produtoId = e.target.dataset.id;
+        
+        try {
+            const response = await fetch(`/estoque/deletar/${produtoId}/`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': getCookie('csrftoken')
+                }
+            });
+            
+            const result = await response.json();
+            
+            if (result.success) {
+                alert(result.message);
+                
+                // Remover linha da tabela
+                const linha = document.querySelector(`tr[data-produto-id="${produtoId}"]`);
+                linha.remove();
+                
+                // Se não houver mais produtos, mostrar mensagem
+                const tbody = document.getElementById('tabela-estoque');
+                if (tbody.children.length === 0) {
+                    tbody.innerHTML = '<tr id="linha-vazia"><td colspan="7" style="text-align: center;">Nenhum produto cadastrado</td></tr>';
+                }
+            } else {
+                alert('Erro: ' + result.message);
+            }
+        } catch (error) {
+            console.error('Erro:', error);
+            alert('Erro ao deletar produto');
+        }
+    }
+});
 
-                <!-- Campos do Formulário -->
-                <div class="form-group">
-                    <label for="nome_produto">Nome do Produto</label>
-                    <input 
-                        id="nome_produto" 
-                        type="text" 
-                        readonly
-                        placeholder="Selecione um produto acima"
-                    >
-                </div>
+// Lançar Reposição
+document.getElementById('form-reposicao').addEventListener('submit', async function(e) {
+    e.preventDefault();
+    
+    const produtoId = document.getElementById('produto-reposicao').value;
+    const quantidade = parseInt(document.getElementById('quantidade-reposicao').value);
+    
+    try {
+        const response = await fetch(`/estoque/reposicao/${produtoId}/`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': getCookie('csrftoken')
+            },
+            body: JSON.stringify({ quantidade })
+        });
+        
+        const result = await response.json();
+        
+        if (result.success) {
+            alert(result.message);
+            
+            // Atualizar quantidade na tabela
+            const linha = document.querySelector(`tr[data-produto-id="${produtoId}"]`);
+            if (linha) {
+                linha.querySelector('.quantidade').textContent = result.nova_quantidade;
+            }
+            
+            modalReposicao.style.display = 'none';
+            this.reset();
+        } else {
+            alert('Erro: ' + result.message);
+        }
+    } catch (error) {
+        console.error('Erro:', error);
+        alert('Erro ao adicionar reposição');
+    }
+});
+</script>
 
-                <div class="form-group">
-                    <label for="preco_custo">Preço de Custo Unitário (R$)</label>
-                    <input 
-                        id="preco_custo" 
-                        type="text" 
-                        readonly
-                        placeholder="0,00"
-                    >
-                </div>
+<style>
+.header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 20px;
+}
 
-                <div class="form-row">
-                    <div class="form-group">
-                        <label for="preco_venda">Preço de Venda (R$) *</label>
-                        <input 
-                            id="preco_venda" 
-                            name="preco_venda"
-                            type="number" 
-                            step="0.01" 
-                            min="0"
-                            placeholder="0,00"
-                            required
-                        >
-                    </div>
+.btn-secondary {
+    background-color: #6c757d;
+    color: white;
+}
 
-                    <div class="form-group">
-                        <label for="quantidade">Quantidade *</label>
-                        <input 
-                            id="quantidade" 
-                            name="quantidade"
-                            type="number" 
-                            min="1"
-                            step="1"
-                            placeholder="0"
-                            required
-                        >
-                    </div>
-                </div>
-            </div>
+.btn-secondary:hover {
+    background-color: #5a6268;
+}
 
-            <div class="modal-actions">
-                <button type="button" class="btn btn-secondary" id="cancelReposicao">Cancelar</button>
-                <button type="submit" class="btn btn-primary">Confirmar Reposição</button>
-            </div>
-        </form>
-    </div>
-</div>
+.modal {
+    display: none;
+    position: fixed;
+    z-index: 1000;
+    left: 0;
+    top: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.5);
+}
 
-{% endblock %}
+.modal-content {
+    background-color: white;
+    margin: 5% auto;
+    padding: 30px;
+    border-radius: 10px;
+    width: 90%;
+    max-width: 600px;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+}
 
-{% block scripts %}
-<!-- <link rel="stylesheet" href="{% static 'css/modais/estoque.css' %}"> -->
-<script src="{% static 'js/modais/estoque.js' %}"></script>
+.close {
+    color: #aaa;
+    float: right;
+    font-size: 28px;
+    font-weight: bold;
+    cursor: pointer;
+    line-height: 20px;
+}
+
+.close:hover {
+    color: #000;
+}
+
+.modal h2 {
+    margin-top: 0;
+    margin-bottom: 20px;
+    color: #2c3e50;
+}
+
+.btn-editar, .btn-deletar {
+    cursor: pointer;
+    text-decoration: none;
+    padding: 5px 10px;
+    border-radius: 4px;
+}
+
+.btn-editar {
+    color: #007bff;
+}
+
+.btn-editar:hover {
+    background-color: #e7f3ff;
+}
+
+.btn-deletar:hover {
+    background-color: #ffe7e7;
+}
+</style>
 {% endblock %}

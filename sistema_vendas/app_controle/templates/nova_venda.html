@@ -75,10 +75,6 @@
                 <div class="form-group">
             <label for="forma-pagamento">Forma de Pagamento</label>
             <select id="forma-pagamento" class="form-control">
-                <option value="dinheiro">Dinheiro</option>
-                <option value="pix">Pix</option>
-                <option value="credito">Cartão de Crédito</option>
-                <option value="debito">Cartão de Débito</option>
             </select>
         </div>
 
@@ -192,7 +188,7 @@ async function carregarFormasPagamento() {
         
         if (data.success) {
             const select = document.getElementById('forma-pagamento');
-            select.innerHTML = '<option value="">Dinheiro</option>';
+            
             
             data.formas_pagamento.forEach(forma => {
                 const option = document.createElement('option');

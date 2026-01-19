@@ -1,7 +1,9 @@
 # app_controle/services/venda_services.py
 
 from django.db import transaction
+from django.db.models import Q
 from decimal import Decimal
+from datetime import datetime
 from ..models import Venda, Cliente, Produto, Pagamento, Estoque
 
 class VendaService:
@@ -141,12 +143,42 @@ class VendaService:
         return venda
     
     @staticmethod
-    def listar_vendas():
-        """Lista todas as vendas"""
-        return Venda.objects.select_related(
+    def listar_vendas(data_inicio=None, data_fim=None):
+        """
+        Lista todas as vendas com filtro opcional por data
+        
+        Args:
+            data_inicio: String no formato 'YYYY-MM-DD' ou None
+            data_fim: String no formato 'YYYY-MM-DD' ou None
+        """
+        vendas = Venda.objects.select_related(
             'CLIENTE_idCLIENTE',
             'PAGAMENTO_idPAGAMENTO'
-        ).order_by('-DT_VENDA')
+        )
+        
+        # Aplicar filtros de data se fornecidos
+        if data_inicio:
+            try:
+                # Converte para datetime e adiciona hora 00:00:00
+                data_inicio_dt = datetime.strptime(data_inicio, '%Y-%m-%d')
+                vendas = vendas.filter(DT_VENDA__gte=data_inicio_dt)
+                print(f"[VENDA SERVICE] Filtro aplicado: data >= {data_inicio}")
+            except ValueError:
+                print(f"[VENDA SERVICE] ⚠️ Data início inválida: {data_inicio}")
+        
+        if data_fim:
+            try:
+                # Converte para datetime e adiciona hora 23:59:59
+                data_fim_dt = datetime.strptime(data_fim, '%Y-%m-%d')
+                # Adiciona 1 dia e usa __lt para pegar até o final do dia
+                from datetime import timedelta
+                data_fim_dt = data_fim_dt + timedelta(days=1)
+                vendas = vendas.filter(DT_VENDA__lt=data_fim_dt)
+                print(f"[VENDA SERVICE] Filtro aplicado: data <= {data_fim}")
+            except ValueError:
+                print(f"[VENDA SERVICE] ⚠️ Data fim inválida: {data_fim}")
+        
+        return vendas.order_by('-DT_VENDA')
     
     @staticmethod
     def buscar_venda(venda_id):

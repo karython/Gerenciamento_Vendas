@@ -7,10 +7,40 @@
 <div class="header-vendas">
     <h1>Histórico de Vendas</h1>
     <div class="header-right">
-        <input type="date" id="filtro-data" class="input-data">
-        <button class="btn-calendario">📅</button>
+        <form id="form-filtro" method="GET" class="filtro-form">
+            <div class="filtro-group">
+                <label>De:</label>
+                <input type="date" 
+                       name="data_inicio" 
+                       id="data-inicio" 
+                       class="input-data"
+                       value="{{ data_inicio }}">
+            </div>
+            <div class="filtro-group">
+                <label>Até:</label>
+                <input type="date" 
+                       name="data_fim" 
+                       id="data-fim" 
+                       class="input-data"
+                       value="{{ data_fim }}">
+            </div>
+            <button type="submit" class="btn-filtrar">🔍 Filtrar</button>
+            <button type="button" class="btn-limpar" onclick="limparFiltros()">✖ Limpar</button>
+        </form>
     </div>
 </div>
+
+<!-- Badge de filtros ativos -->
+{% if data_inicio or data_fim %}
+<div class="filtros-ativos">
+    <span class="badge-filtro">
+        📅 Filtro ativo: 
+        {% if data_inicio %}de {{ data_inicio|date:"d/m/Y" }}{% endif %}
+        {% if data_fim %}até {{ data_fim|date:"d/m/Y" }}{% endif %}
+    </span>
+    <span class="total-resultados">{{ vendas.count }} venda(s) encontrada(s)</span>
+</div>
+{% endif %}
 
 <div class="card-vendas">
     <table class="tabela-vendas">
@@ -33,7 +63,7 @@
                 <td>R$ {{ venda.VLR_TOTAL|floatformat:2 }}</td>
                 <td>{{ venda.PAGAMENTO_idPAGAMENTO.TP_PAGAMENTO }}</td>
                 <td>
-                    <a href="#" class="link-acao" onclick="verDetalhes({{ venda.idVENDA }}); return false;">Ver Detalhes</a>
+                    <a href="#" class="link-acao" onclick="verDetalhes('{{ venda.idVENDA }}'); return false;">Ver Detalhes</a>
                     /
                     <a href="{% url 'gerar_pdf_venda' venda.idVENDA %}" class="link-acao" target="_blank">Reimprimir</a>
                 </td>
@@ -41,7 +71,11 @@
             {% empty %}
             <tr>
                 <td colspan="6" style="text-align: center; padding: 30px;">
-                    Nenhuma venda registrada
+                    {% if data_inicio or data_fim %}
+                        Nenhuma venda encontrada no período selecionado
+                    {% else %}
+                        Nenhuma venda registrada
+                    {% endif %}
                 </td>
             </tr>
             {% endfor %}
@@ -62,44 +96,78 @@
     </div>
 </div>
 
+<!-- Dados das vendas para JavaScript -->
+<script id="vendas-data" type="application/json">
+[
+    {% for venda in vendas %}
+    {
+        "id": {{ venda.idVENDA }},
+        "idFormatado": "V-{{ venda.idVENDA|stringformat:"05d" }}",
+        "data": "{{ venda.DT_VENDA|date:"d/m/Y H:i" }}",
+        "cliente": "{{ venda.CLIENTE_idCLIENTE.NOME_CLIENTE|escapejs }}",
+        "cpf": "{{ venda.CLIENTE_idCLIENTE.CPF|escapejs }}",
+        "telefone": "{{ venda.CLIENTE_idCLIENTE.TELEFONE|escapejs }}",
+        "quantidade": {{ venda.QTD_VENDIDA }},
+        "valorTotal": "{{ venda.VLR_TOTAL|floatformat:2 }}",
+        "formaPagamento": "{{ venda.PAGAMENTO_idPAGAMENTO.TP_PAGAMENTO|escapejs }}",
+        "urlPdf": "{% url 'gerar_pdf_venda' venda.idVENDA %}"
+    }{% if not forloop.last %},{% endif %}
+    {% endfor %}
+]
+</script>
+
 <script>
+// Carregar dados das vendas
+const vendasData = JSON.parse(document.getElementById('vendas-data').textContent);
+
 function verDetalhes(vendaId) {
     console.log('Ver detalhes da venda:', vendaId);
     
-    // Buscar detalhes da venda
-    {% for venda in vendas %}
-    if ({{ venda.idVENDA }} === vendaId) {
-        const html = `
-            <div class="detalhes-venda">
-                <p><strong>ID Venda:</strong> V-{{ venda.idVENDA|stringformat:"05d" }}</p>
-                <p><strong>Data:</strong> {{ venda.DT_VENDA|date:"d/m/Y H:i" }}</p>
-                <p><strong>Cliente:</strong> {{ venda.CLIENTE_idCLIENTE.NOME_CLIENTE }}</p>
-                <p><strong>CPF:</strong> {{ venda.CLIENTE_idCLIENTE.CPF }}</p>
-                <p><strong>Telefone:</strong> {{ venda.CLIENTE_idCLIENTE.TELEFONE }}</p>
-                <hr>
-                <p><strong>Quantidade de Itens:</strong> {{ venda.QTD_VENDIDA }}</p>
-                <p><strong>Valor Total:</strong> R$ {{ venda.VLR_TOTAL|floatformat:2 }}</p>
-                <p><strong>Forma de Pagamento:</strong> {{ venda.PAGAMENTO_idPAGAMENTO.TP_PAGAMENTO }}</p>
-                <hr>
-                <div style="text-align: center; margin-top: 20px;">
-                    <a href="{% url 'gerar_pdf_venda' venda.idVENDA %}" 
-                       class="btn-download" 
-                       target="_blank">
-                        📄 Baixar Nota Fiscal
-                    </a>
-                </div>
-            </div>
-        `;
-        
-        document.getElementById('modal-content').innerHTML = html;
-        document.getElementById('modal-detalhes').style.display = 'flex';
+    // Converter vendaId para número
+    const id = parseInt(vendaId);
+    
+    // Buscar venda nos dados
+    const venda = vendasData.find(v => v.id === id);
+    
+    if (!venda) {
+        console.error('Venda não encontrada:', vendaId);
         return;
     }
-    {% endfor %}
+    
+    // Montar HTML dos detalhes
+    const html = `
+        <div class="detalhes-venda">
+            <p><strong>ID Venda:</strong> ${venda.idFormatado}</p>
+            <p><strong>Data:</strong> ${venda.data}</p>
+            <p><strong>Cliente:</strong> ${venda.cliente}</p>
+            <p><strong>CPF:</strong> ${venda.cpf}</p>
+            <p><strong>Telefone:</strong> ${venda.telefone}</p>
+            <hr>
+            <p><strong>Quantidade de Itens:</strong> ${venda.quantidade}</p>
+            <p><strong>Valor Total:</strong> R$ ${venda.valorTotal}</p>
+            <p><strong>Forma de Pagamento:</strong> ${venda.formaPagamento}</p>
+            <hr>
+            <div style="text-align: center; margin-top: 20px;">
+                <a href="${venda.urlPdf}" 
+                   class="btn-download" 
+                   target="_blank">
+                    📄 Baixar Nota Fiscal
+                </a>
+            </div>
+        </div>
+    `;
+    
+    document.getElementById('modal-content').innerHTML = html;
+    document.getElementById('modal-detalhes').style.display = 'flex';
 }
 
 function fecharModal() {
     document.getElementById('modal-detalhes').style.display = 'none';
+}
+
+function limparFiltros() {
+    // Limpa os campos e recarrega a página sem parâmetros
+    window.location.href = window.location.pathname;
 }
 
 // Fechar modal ao clicar fora
@@ -109,11 +177,31 @@ document.getElementById('modal-detalhes').addEventListener('click', function(e) 
     }
 });
 
-// Filtro de data
-document.getElementById('filtro-data').addEventListener('change', function() {
-    const dataFiltro = this.value;
-    console.log('Filtrar por data:', dataFiltro);
-    // Implementar filtro se necessário
+// Validação de datas (data fim não pode ser anterior à data início)
+document.getElementById('data-fim').addEventListener('change', function() {
+    const dataInicio = document.getElementById('data-inicio').value;
+    const dataFim = this.value;
+    
+    if (dataInicio && dataFim && dataFim < dataInicio) {
+        alert('A data final não pode ser anterior à data inicial!');
+        this.value = '';
+    }
+});
+
+// Auto-submit quando selecionar data de início e fim já estiver preenchida
+document.getElementById('data-inicio').addEventListener('change', function() {
+    const dataFim = document.getElementById('data-fim').value;
+    if (dataFim) {
+        document.getElementById('form-filtro').submit();
+    }
+});
+
+// Auto-submit quando selecionar data de fim e início já estiver preenchida
+document.getElementById('data-fim').addEventListener('change', function() {
+    const dataInicio = document.getElementById('data-inicio').value;
+    if (dataInicio) {
+        document.getElementById('form-filtro').submit();
+    }
 });
 </script>
 
@@ -133,8 +221,25 @@ document.getElementById('filtro-data').addEventListener('change', function() {
 
 .header-right {
     display: flex;
+    align-items: center;
+}
+
+.filtro-form {
+    display: flex;
     gap: 10px;
     align-items: center;
+}
+
+.filtro-group {
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+}
+
+.filtro-group label {
+    font-size: 12px;
+    color: #666;
+    font-weight: 500;
 }
 
 .input-data {
@@ -142,19 +247,68 @@ document.getElementById('filtro-data').addEventListener('change', function() {
     border: 1px solid #ccc;
     border-radius: 4px;
     font-size: 14px;
+    min-width: 150px;
 }
 
-.btn-calendario {
-    padding: 8px 15px;
-    background: white;
-    border: 1px solid #ccc;
+.input-data:focus {
+    outline: none;
+    border-color: #007bff;
+    box-shadow: 0 0 0 3px rgba(0, 123, 255, 0.1);
+}
+
+.btn-filtrar {
+    padding: 8px 16px;
+    background: #007bff;
+    color: white;
+    border: none;
     border-radius: 4px;
     cursor: pointer;
-    font-size: 16px;
+    font-size: 14px;
+    font-weight: 500;
+    margin-top: 22px;
 }
 
-.btn-calendario:hover {
-    background: #f5f5f5;
+.btn-filtrar:hover {
+    background: #0056b3;
+}
+
+.btn-limpar {
+    padding: 8px 16px;
+    background: #6c757d;
+    color: white;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 14px;
+    font-weight: 500;
+    margin-top: 22px;
+}
+
+.btn-limpar:hover {
+    background: #5a6268;
+}
+
+.filtros-ativos {
+    background: #e7f3ff;
+    border: 1px solid #b3d9ff;
+    border-radius: 6px;
+    padding: 12px 16px;
+    margin-bottom: 20px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.badge-filtro {
+    color: #004085;
+    font-weight: 500;
+    font-size: 14px;
+}
+
+.total-resultados {
+    color: #004085;
+    font-weight: 600;
+    font-size: 14px;
 }
 
 .card-vendas {
@@ -275,35 +429,24 @@ document.getElementById('filtro-data').addEventListener('change', function() {
 .btn-download:hover {
     background: #0056b3;
 }
+
+/* Responsividade */
+@media (max-width: 768px) {
+    .header-vendas {
+        flex-direction: column;
+        gap: 15px;
+        align-items: flex-start;
+    }
+    
+    .filtro-form {
+        flex-wrap: wrap;
+    }
+    
+    .filtros-ativos {
+        flex-direction: column;
+        gap: 10px;
+        align-items: flex-start;
+    }
+}
 </style>
 {% endblock %}
-```
-
-## 5. Testar o Fluxo Completo
-
-### Passo 1: Criar Formas de Pagamento
-Execute o código do shell que mostrei no início.
-
-### Passo 2: Fazer uma Venda
-1. Acesse `/vendas/nova/`
-2. Selecione um cliente
-3. Adicione produtos
-4. **Selecione uma forma de pagamento** (agora deve aparecer as opções!)
-5. Clique em "Finalizar Venda e Gerar PDF"
-6. O PDF deve baixar automaticamente
-
-### Passo 3: Ver Histórico
-1. Acesse `/vendas/`
-2. Veja a venda cadastrada
-3. Clique em "Ver Detalhes" → Modal abre
-4. Clique em "Reimprimir" → Baixa o PDF novamente
-
-## 6. Logs Esperados
-```
-[VIEW] Carregando histórico de vendas...
-[VIEW] Total de vendas: 3
-[07/Dec/2025 14:00:00] "GET /vendas/ HTTP/1.1" 200 5432
-
-[PDF] Gerando nota fiscal para venda #1
-[PDF] ✅ Nota fiscal V-00001 gerada com sucesso!
-[07/Dec/2025 14:01:00] "GET /vendas/pdf/1/ HTTP/1.1" 200 8543

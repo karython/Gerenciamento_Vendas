@@ -1,17 +1,26 @@
+# ============================================
 # app_controle/views/estoque_views.py
+# ============================================
 
 from django.shortcuts import render, redirect, get_object_or_404
 from django.http import JsonResponse
 from django.contrib import messages
 from ..services.estoque_services import EstoqueService
+from ..services.auth_services import AuthService
 from ..models import Produto, Estoque
 from datetime import datetime
 
+@AuthService.requer_login
 def estoque(request):
     """Lista todos os produtos em estoque"""
+    loja = AuthService.loja_logada(request)
     estoques = EstoqueService.listar_estoque()
-    return render(request, 'estoque.html', {'estoques': estoques})
+    return render(request, 'estoque.html', {
+        'estoques': estoques,
+        'loja': loja
+    })
 
+@AuthService.requer_login
 def cadastrar_produto(request):
     """Cadastra um novo produto no estoque"""
     if request.method == 'POST':
@@ -62,18 +71,16 @@ def cadastrar_produto(request):
     
     return JsonResponse({'success': False, 'message': 'Método não permitido'}, status=405)
 
+@AuthService.requer_login
 def buscar_produto_ajax(request, produto_id):
     """Busca dados de um produto para edição - AJAX"""
     if request.method != 'GET':
         return JsonResponse({'success': False, 'message': 'Método inválido'}, status=400)
     
     try:
-        print(f"[VIEW] Buscando produto {produto_id}")  # Debug
+        print(f"[VIEW] Buscando produto {produto_id}")
         
-        # Buscar produto
         produto = get_object_or_404(Produto, idPRODUTO=produto_id)
-        
-        # Buscar estoque
         estoque = Estoque.objects.filter(PRODUTO_idPRODUTO=produto).first()
         
         if not estoque:
@@ -82,7 +89,6 @@ def buscar_produto_ajax(request, produto_id):
                 'message': 'Produto sem estoque cadastrado'
             }, status=404)
         
-        # Preparar dados para retornar
         dados = {
             'success': True,
             'produto': {
@@ -94,7 +100,7 @@ def buscar_produto_ajax(request, produto_id):
             }
         }
         
-        print(f"[VIEW] Produto encontrado: {dados}")  # Debug
+        print(f"[VIEW] Produto encontrado: {dados}")
         
         return JsonResponse(dados)
         
@@ -113,6 +119,7 @@ def buscar_produto_ajax(request, produto_id):
             'message': f'Erro: {str(e)}'
         }, status=500)
 
+@AuthService.requer_login
 def editar_produto(request, produto_id):
     """Edita um produto"""
     if request.method == 'POST':
@@ -124,7 +131,6 @@ def editar_produto(request, produto_id):
             print(f"[VIEW] Editando produto {produto_id}")
             print(f"Dados recebidos: {dados}")
             
-            # Validações
             if not dados.get('nome'):
                 return JsonResponse({'success': False, 'message': 'Nome é obrigatório'}, status=400)
             
@@ -134,7 +140,6 @@ def editar_produto(request, produto_id):
             if 'quantidade' in dados and int(dados['quantidade']) < 0:
                 return JsonResponse({'success': False, 'message': 'Quantidade não pode ser negativa'}, status=400)
             
-            # Atualizar produto
             produto = EstoqueService.atualizar_produto(produto_id, dados)
             
             print(f"[VIEW] Produto {produto_id} atualizado com sucesso!")
@@ -162,6 +167,7 @@ def editar_produto(request, produto_id):
     
     return JsonResponse({'success': False, 'message': 'Método não permitido'}, status=405)
 
+@AuthService.requer_login
 def deletar_produto(request, produto_id):
     """Deleta um produto do banco de dados"""
     if request.method == 'POST':
@@ -190,6 +196,7 @@ def deletar_produto(request, produto_id):
     
     return JsonResponse({'success': False, 'message': 'Método não permitido'}, status=405)
 
+@AuthService.requer_login
 def adicionar_reposicao(request, produto_id):
     """Adiciona reposição ao estoque"""
     if request.method == 'POST':

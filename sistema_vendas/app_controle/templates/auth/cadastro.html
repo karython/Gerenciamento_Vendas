@@ -1,0 +1,327 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Cadastro - Sistema de Vendas</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #2d5016 0%, #5c8a3a 50%, #7fa84f 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 600px;
+            width: 100%;
+        }
+
+        .card {
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            overflow: hidden;
+        }
+
+        .header {
+            background: linear-gradient(135deg, #5c8a3a 0%, #7fa84f 100%);
+            color: white;
+            padding: 40px;
+            text-align: center;
+        }
+
+        .header h1 {
+            font-size: 32px;
+            margin-bottom: 10px;
+        }
+
+        .header p {
+            opacity: 0.95;
+        }
+
+        .form-container {
+            padding: 40px;
+        }
+
+        .form-group {
+            margin-bottom: 25px;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 8px;
+            color: #3d2817;
+            font-weight: 600;
+            font-size: 14px;
+        }
+
+        .form-group input {
+            width: 100%;
+            padding: 14px 16px;
+            border: 2px solid #e0e0e0;
+            border-radius: 10px;
+            font-size: 15px;
+            transition: all 0.3s ease;
+        }
+
+        .form-group input:focus {
+            outline: none;
+            border-color: #5c8a3a;
+            box-shadow: 0 0 0 3px rgba(92, 138, 58, 0.1);
+        }
+
+        .form-group small {
+            display: block;
+            margin-top: 5px;
+            color: #666;
+            font-size: 13px;
+        }
+
+        .required {
+            color: #c44536;
+        }
+
+        .btn {
+            width: 100%;
+            padding: 16px;
+            border-radius: 10px;
+            border: none;
+            font-weight: 600;
+            font-size: 16px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, #5c8a3a 0%, #7fa84f 100%);
+            color: white;
+            margin-bottom: 15px;
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(92, 138, 58, 0.4);
+        }
+
+        .btn-secondary {
+            background: #6d4c41;
+            color: white;
+            text-decoration: none;
+            display: block;
+            text-align: center;
+        }
+
+        .btn-secondary:hover {
+            background: #5d4037;
+            transform: translateY(-2px);
+        }
+
+        .messages {
+            margin-bottom: 20px;
+        }
+
+        .alert {
+            padding: 15px 20px;
+            border-radius: 10px;
+            margin-bottom: 15px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .alert-success {
+            background: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+
+        .alert-error {
+            background: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+
+        .divider {
+            text-align: center;
+            margin: 30px 0;
+            color: #999;
+            font-size: 14px;
+        }
+
+        @media (max-width: 768px) {
+            .form-container {
+                padding: 30px 20px;
+            }
+
+            .header {
+                padding: 30px 20px;
+            }
+
+            .header h1 {
+                font-size: 26px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="card">
+            <div class="header">
+                <h1>🏪 Criar Conta</h1>
+                <p>Cadastre sua loja e comece a vender</p>
+            </div>
+
+            <div class="form-container">
+                {% if messages %}
+                <div class="messages">
+                    {% for message in messages %}
+                    <div class="alert alert-{{ message.tags }}">
+                        {{ message }}
+                    </div>
+                    {% endfor %}
+                </div>
+                {% endif %}
+
+                <form method="POST" id="form-cadastro">
+                    {% csrf_token %}
+
+                    <div class="form-group">
+                        <label>Nome da Loja <span class="required">*</span></label>
+                        <input type="text" 
+                               name="nome_loja" 
+                               required 
+                               maxlength="200"
+                               value="{{ dados.nome_loja|default:'' }}"
+                               placeholder="Ex: Loja do João">
+                    </div>
+
+                    <div class="form-group">
+                        <label>CNPJ <span class="required">*</span></label>
+                        <input type="text" 
+                               name="cnpj" 
+                               id="cnpj"
+                               required 
+                               maxlength="18"
+                               value="{{ dados.cnpj|default:'' }}"
+                               placeholder="00.000.000/0000-00">
+                        <small>Digite apenas números ou use o formato com pontuação</small>
+                    </div>
+
+                    <div class="form-group">
+                        <label>Telefone</label>
+                        <input type="text" 
+                               name="telefone" 
+                               id="telefone"
+                               maxlength="15"
+                               value="{{ dados.telefone|default:'' }}"
+                               placeholder="(00) 00000-0000">
+                    </div>
+
+                    <div class="form-group">
+                        <label>E-mail</label>
+                        <input type="email" 
+                               name="email"
+                               maxlength="120"
+                               value="{{ dados.email|default:'' }}"
+                               placeholder="contato@loja.com">
+                    </div>
+
+                    <div class="form-group">
+                        <label>Endereço</label>
+                        <input type="text" 
+                               name="endereco"
+                               maxlength="255"
+                               value="{{ dados.endereco|default:'' }}"
+                               placeholder="Rua, número, bairro, cidade">
+                    </div>
+
+                    <div class="form-group">
+                        <label>Senha <span class="required">*</span></label>
+                        <input type="password" 
+                               name="senha" 
+                               required 
+                               minlength="6"
+                               maxlength="50"
+                               placeholder="Mínimo 6 caracteres">
+                        <small>A senha deve ter no mínimo 6 caracteres</small>
+                    </div>
+
+                    <div class="form-group">
+                        <label>Confirmar Senha <span class="required">*</span></label>
+                        <input type="password" 
+                               name="senha_confirmacao" 
+                               required 
+                               minlength="6"
+                               maxlength="50"
+                               placeholder="Digite a senha novamente">
+                    </div>
+
+                    <button type="submit" class="btn btn-primary">
+                        🚀 Criar Conta
+                    </button>
+
+                    <div class="divider">ou</div>
+
+                    <a href="{% url 'login' %}" class="btn btn-secondary">
+                        🔑 Já tenho uma conta
+                    </a>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Máscara para CNPJ
+        document.getElementById('cnpj').addEventListener('input', function(e) {
+            let value = e.target.value.replace(/\D/g, '');
+            
+            if (value.length <= 14) {
+                value = value.replace(/^(\d{2})(\d)/, '$1.$2');
+                value = value.replace(/^(\d{2})\.(\d{3})(\d)/, '$1.$2.$3');
+                value = value.replace(/\.(\d{3})(\d)/, '.$1/$2');
+                value = value.replace(/(\d{4})(\d)/, '$1-$2');
+            }
+            
+            e.target.value = value;
+        });
+
+        // Máscara para telefone
+        document.getElementById('telefone').addEventListener('input', function(e) {
+            let value = e.target.value.replace(/\D/g, '');
+            
+            if (value.length <= 11) {
+                if (value.length <= 10) {
+                    value = value.replace(/^(\d{2})(\d)/, '($1) $2');
+                    value = value.replace(/(\d{4})(\d)/, '$1-$2');
+                } else {
+                    value = value.replace(/^(\d{2})(\d)/, '($1) $2');
+                    value = value.replace(/(\d{5})(\d)/, '$1-$2');
+                }
+            }
+            
+            e.target.value = value;
+        });
+
+        // Validação de senha
+        document.getElementById('form-cadastro').addEventListener('submit', function(e) {
+            const senha = document.querySelector('input[name="senha"]').value;
+            const confirmacao = document.querySelector('input[name="senha_confirmacao"]').value;
+
+            if (senha !== confirmacao) {
+                e.preventDefault();
+                alert('❌ As senhas não coincidem!');
+            }
+        });
+    </script>
+</body>
+</html>

@@ -102,6 +102,55 @@
 </div>
 
 <script>
+    
+function deletarCliente(clienteId, nomeCliente) {
+    // Confirmar exclusão
+    if (!confirm(`Tem certeza que deseja excluir o cliente "${nomeCliente}"?`)) {
+        return;
+    }
+    
+    console.log(`Deletando cliente ID: ${clienteId}`);
+    
+    // Fazer requisição para deletar
+    fetch(`/clientes/deletar/${clienteId}/`, {
+        method: 'POST',
+        headers: {
+            'X-CSRFToken': getCookie('csrftoken'),
+            'Content-Type': 'application/json'
+        }
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            // Sucesso - cliente deletado
+            alert(data.message);
+            location.reload(); // Recarrega a página para atualizar a lista
+        } else {
+            // Erro - mostrar mensagem detalhada
+            if (data.has_vendas) {
+                // Cliente tem vendas
+                alert(
+                    `❌ ATENÇÃO!\n\n` +
+                    `O cliente "${nomeCliente}" possui ${data.quantidade_vendas} venda(s) registrada(s) no sistema.\n\n` +
+                    `Para excluir este cliente, você precisa primeiro:\n` +
+                    `1. Acessar a lista de vendas\n` +
+                    `2. Remover as vendas deste cliente\n` +
+                    `3. Depois voltar e tentar excluir novamente\n\n` +
+                    `Isso garante a integridade dos dados do sistema.`
+                );
+            } else {
+                // Outro tipo de erro
+                alert(`❌ ${data.message}`);
+            }
+        }
+    })
+    .catch(error => {
+        console.error('Erro:', error);
+        alert('❌ Erro ao deletar cliente. Tente novamente.');
+    });
+}
+
+// Função auxiliar para pegar o CSRF token
 function getCookie(name) {
     let cookieValue = null;
     if (document.cookie && document.cookie !== '') {

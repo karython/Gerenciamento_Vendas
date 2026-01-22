@@ -9,13 +9,20 @@ from app_controle.views import (
     vendas_views,
     novavenda_views,
     home_views,
-    logout_views
+    logout_views,
+    auth_views,
 )
 
 urlpatterns = [
     path('admin/', admin.site.urls),
     path('', home_views.home, name='home'),
     path('dashboard/', dashboard_views.dashboard, name='dashboard'),
+
+    # === Autenticação (login e cadastro) ===
+    path('', auth_views.index, name='index'),
+    path('cadastro/', auth_views.cadastro, name='cadastro'),
+    path('login/', auth_views.login, name='login'),
+    path('logout/', auth_views.logout, name='logout'),
     
     # === ESTOQUE === (ordem importa!)
     path('estoque/', estoque_views.estoque, name='estoque'),
@@ -27,6 +34,8 @@ urlpatterns = [
     
     # === VENDAS ===
     path('vendas/', vendas_views.vendas, name='vendas'),
+    path('vendas/deletar/<int:venda_id>/', vendas_views.deletar_venda, name='deletar_venda'),
+    path('vendas/deletar-multiplas/', vendas_views.deletar_vendas_multiplas, name='deletar_vendas_multiplas'),
     path('vendas/nova/', novavenda_views.nova_venda, name='nova_venda'),
     path('vendas/criar/', novavenda_views.criar_venda, name='criar_venda'),
     path('vendas/pdf/<int:venda_id>/', novavenda_views.gerar_pdf_venda, name='gerar_pdf_venda'),
@@ -41,7 +50,5 @@ urlpatterns = [
     path('clientes/criar/', cliente_views.criar_cliente, name='criar_cliente'),
     path('clientes/editar/<int:id>/', cliente_views.editar_cliente, name='editar_cliente'),
     path('clientes/deletar/<int:id>/', cliente_views.deletar_cliente, name='deletar_cliente'),
-    
-    # === LOGOUT ===
-    path('logout/', logout_views.logout, name='logout'),
+
 ]

@@ -3,21 +3,28 @@ from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib import messages
 from django.http import JsonResponse
 from ..services.cliente_services import ClienteService
+from ..services.auth_services import AuthService
 from ..models import Cliente
 
+@AuthService.requer_login
 def listar_clientes(request):
     """Lista todos os clientes cadastrados"""
     print("=" * 50)
     print("[VIEW] Função listar_clientes chamada")
     
+    loja = AuthService.loja_logada(request)
     clientes = ClienteService.listar_clientes()
     
     print(f"[VIEW] Total de clientes na view: {clientes.count()}")
     print(f"[VIEW] Clientes: {list(clientes.values('idCLIENTE', 'NOME_CLIENTE', 'CPF'))}")
     print("=" * 50)
     
-    return render(request, 'clientes.html', {'clientes': clientes})  # ← MUDEI AQUI
+    return render(request, 'clientes.html', {
+        'clientes': clientes,
+        'loja': loja
+    })
 
+@AuthService.requer_login
 def criar_cliente(request):
     """Cria um novo cliente via AJAX"""
     if request.method == 'POST':
@@ -67,8 +74,10 @@ def criar_cliente(request):
     
     return JsonResponse({'success': False, 'message': 'Método não permitido'}, status=405)
 
+@AuthService.requer_login
 def editar_cliente(request, id):
     """Edita um cliente existente"""
+    loja = AuthService.loja_logada(request)
     cliente = get_object_or_404(Cliente, idCLIENTE=id)
     
     if request.method == 'POST':
@@ -103,23 +112,51 @@ def editar_cliente(request, id):
             
             messages.error(request, f'Erro ao atualizar cliente: {str(e)}')
     
-    return render(request, 'editar_cliente.html', {'cliente': cliente})  # ← SEM 'core/'
+    return render(request, 'editar_cliente.html', {
+        'cliente': cliente,
+        'loja': loja
+    })
 
+@AuthService.requer_login
 def deletar_cliente(request, id):
-    """Deleta um cliente"""
+    """Deleta um cliente (com validação de vendas)"""
     if request.method == 'POST':
         try:
-            print(f"Deletando cliente ID: {id}")
+            print(f"[VIEW] Deletando cliente ID: {id}")
+            
+            # Verificar se tem vendas ANTES de tentar deletar
+            quantidade_vendas = ClienteService.verificar_vendas_cliente(id)
+            
+            if quantidade_vendas > 0:
+                # Cliente tem vendas, não pode deletar
+                return JsonResponse({
+                    'success': False,
+                    'message': f'❌ Este cliente possui {quantidade_vendas} venda(s) registrada(s) no sistema. Não é possível excluí-lo.',
+                    'has_vendas': True,
+                    'quantidade_vendas': quantidade_vendas
+                }, status=400)
+            
+            # Cliente não tem vendas, pode deletar
             nome = ClienteService.deletar_cliente(id)
+            
             return JsonResponse({
                 'success': True,
-                'message': f'Cliente {nome} deletado com sucesso!'
+                'message': f'✅ Cliente {nome} deletado com sucesso!'
             })
-        except Exception as e:
-            print(f"ERRO ao deletar cliente: {str(e)}")
+            
+        except ValueError as e:
+            print(f"[VIEW] Erro de validação: {str(e)}")
             return JsonResponse({
                 'success': False,
                 'message': str(e)
+            }, status=400)
+        except Exception as e:
+            print(f"[VIEW] ERRO ao deletar cliente: {str(e)}")
+            import traceback
+            traceback.print_exc()
+            return JsonResponse({
+                'success': False,
+                'message': f'Erro ao deletar cliente: {str(e)}'
             }, status=400)
     
     return JsonResponse({

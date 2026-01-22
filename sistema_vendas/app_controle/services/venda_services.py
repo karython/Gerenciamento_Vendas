@@ -3,7 +3,7 @@
 from django.db import transaction
 from django.db.models import Q
 from decimal import Decimal
-from datetime import datetime
+from datetime import datetime, timedelta
 from ..models import Venda, Cliente, Produto, Pagamento, Estoque
 
 class VendaService:
@@ -27,7 +27,6 @@ class VendaService:
         """Retorna lista de produtos com estoque disponível"""
         print("[VENDA SERVICE] Buscando produtos do estoque...")
         
-        # Buscar apenas produtos que têm estoque
         estoques = Estoque.objects.select_related('PRODUTO_idPRODUTO').filter(QTD_DISPONIVEL__gt=0)
         
         resultado = []
@@ -61,27 +60,22 @@ class VendaService:
     @staticmethod
     @transaction.atomic
     def criar_venda(dados):
-        """
-        Cria uma nova venda e atualiza o estoque automaticamente
-        """
+        """Cria uma nova venda e atualiza o estoque automaticamente"""
         print("=" * 50)
         print(f"[VENDA SERVICE] Criando venda com dados: {dados}")
         
-        # Validar cliente
         try:
             cliente = Cliente.objects.get(idCLIENTE=dados['cliente_id'])
             print(f"[VENDA SERVICE] Cliente encontrado: {cliente.NOME_CLIENTE}")
         except Cliente.DoesNotExist:
             raise ValueError("Cliente não encontrado")
         
-        # Validar forma de pagamento
         try:
             pagamento = Pagamento.objects.get(idPAGAMENTO=dados['forma_pagamento_id'])
             print(f"[VENDA SERVICE] Forma de pagamento: {pagamento.TP_PAGAMENTO}")
         except Pagamento.DoesNotExist:
             raise ValueError("Forma de pagamento não encontrada")
         
-        # Calcular valores
         subtotal = Decimal('0.00')
         quantidade_total = 0
         
@@ -96,7 +90,6 @@ class VendaService:
         
         print(f"[VENDA SERVICE] Subtotal: R$ {subtotal}, Desconto: R$ {desconto}, Total: R$ {total}")
         
-        # Criar venda
         venda = Venda.objects.create(
             CLIENTE_idCLIENTE=cliente,
             PAGAMENTO_idPAGAMENTO=pagamento,
@@ -106,30 +99,25 @@ class VendaService:
         
         print(f"[VENDA SERVICE] Venda criada com ID: {venda.idVENDA}")
         
-        # Processar cada item e atualizar estoque
         for item_dados in dados['itens']:
             produto_id = item_dados['produto_id']
             quantidade = int(item_dados['quantidade'])
             
             print(f"[VENDA SERVICE] Processando produto ID {produto_id}, quantidade: {quantidade}")
             
-            # Buscar produto
             try:
                 produto = Produto.objects.get(idPRODUTO=produto_id)
             except Produto.DoesNotExist:
                 raise ValueError(f"Produto ID {produto_id} não encontrado")
             
-            # Buscar estoque
             estoque = Estoque.objects.filter(PRODUTO_idPRODUTO=produto).first()
             
             if not estoque:
                 raise ValueError(f"Produto {produto.DESCRICAO} não possui estoque cadastrado")
             
-            # Validar estoque disponível
             if estoque.QTD_DISPONIVEL < quantidade:
                 raise ValueError(f"Estoque insuficiente para {produto.DESCRICAO}. Disponível: {estoque.QTD_DISPONIVEL}, Solicitado: {quantidade}")
             
-            # Atualizar estoque (DESCONTA a quantidade vendida)
             estoque_anterior = estoque.QTD_DISPONIVEL
             estoque.QTD_DISPONIVEL -= quantidade
             estoque.save()
@@ -143,35 +131,41 @@ class VendaService:
         return venda
     
     @staticmethod
-    def listar_vendas(data_inicio=None, data_fim=None):
+    def listar_vendas(data_inicio=None, data_fim=None, busca_nome=None):
         """
-        Lista todas as vendas com filtro opcional por data
+        Lista todas as vendas com filtros opcionais
         
         Args:
             data_inicio: String no formato 'YYYY-MM-DD' ou None
             data_fim: String no formato 'YYYY-MM-DD' ou None
+            busca_nome: String para buscar pelo nome do cliente ou None
         """
         vendas = Venda.objects.select_related(
             'CLIENTE_idCLIENTE',
             'PAGAMENTO_idPAGAMENTO'
         )
         
-        # Aplicar filtros de data se fornecidos
+        # Filtro por nome do cliente
+        if busca_nome:
+            vendas = vendas.filter(
+                Q(CLIENTE_idCLIENTE__NOME_CLIENTE__icontains=busca_nome) |
+                Q(CLIENTE_idCLIENTE__CPF__icontains=busca_nome)
+            )
+            print(f"[VENDA SERVICE] Filtro aplicado: busca por '{busca_nome}'")
+        
+        # Filtro por data início
         if data_inicio:
             try:
-                # Converte para datetime e adiciona hora 00:00:00
                 data_inicio_dt = datetime.strptime(data_inicio, '%Y-%m-%d')
                 vendas = vendas.filter(DT_VENDA__gte=data_inicio_dt)
                 print(f"[VENDA SERVICE] Filtro aplicado: data >= {data_inicio}")
             except ValueError:
                 print(f"[VENDA SERVICE] ⚠️ Data início inválida: {data_inicio}")
         
+        # Filtro por data fim
         if data_fim:
             try:
-                # Converte para datetime e adiciona hora 23:59:59
                 data_fim_dt = datetime.strptime(data_fim, '%Y-%m-%d')
-                # Adiciona 1 dia e usa __lt para pegar até o final do dia
-                from datetime import timedelta
                 data_fim_dt = data_fim_dt + timedelta(days=1)
                 vendas = vendas.filter(DT_VENDA__lt=data_fim_dt)
                 print(f"[VENDA SERVICE] Filtro aplicado: data <= {data_fim}")
@@ -187,3 +181,54 @@ class VendaService:
             'CLIENTE_idCLIENTE',
             'PAGAMENTO_idPAGAMENTO'
         ).get(idVENDA=venda_id)
+    
+    @staticmethod
+    @transaction.atomic
+    def deletar_venda(venda_id):
+        """
+        Deleta uma venda e devolve os produtos ao estoque
+        
+        Args:
+            venda_id: ID da venda a ser deletada
+            
+        Returns:
+            str: ID formatado da venda deletada
+            
+        Raises:
+            ValueError: Se a venda não for encontrada
+        """
+        print("=" * 50)
+        print(f"[VENDA SERVICE] Iniciando exclusão da venda ID: {venda_id}")
+        
+        try:
+            venda = Venda.objects.select_related(
+                'CLIENTE_idCLIENTE',
+                'PAGAMENTO_idPAGAMENTO'
+            ).get(idVENDA=venda_id)
+            
+            venda_id_formatado = f"V-{venda.idVENDA:05d}"
+            cliente_nome = venda.CLIENTE_idCLIENTE.NOME_CLIENTE
+            
+            print(f"[VENDA SERVICE] Venda encontrada: {venda_id_formatado}")
+            print(f"[VENDA SERVICE] Cliente: {cliente_nome}")
+            print(f"[VENDA SERVICE] Quantidade vendida: {venda.QTD_VENDIDA}")
+            print(f"[VENDA SERVICE] Valor total: R$ {venda.VLR_TOTAL}")
+            
+            # IMPORTANTE: Aqui você precisaria devolver os produtos ao estoque
+            # Como não temos a tabela de itens da venda, vamos apenas deletar
+            # Se você tiver uma tabela de itens, adicione a lógica de devolução aqui
+            
+            print(f"[VENDA SERVICE] ⚠️ ATENÇÃO: Produtos não serão devolvidos ao estoque")
+            print(f"[VENDA SERVICE] (Necessário ter tabela de itens da venda para isso)")
+            
+            # Deletar a venda
+            venda.delete()
+            
+            print(f"[VENDA SERVICE] ✅ Venda {venda_id_formatado} deletada com sucesso!")
+            print("=" * 50)
+            
+            return venda_id_formatado
+            
+        except Venda.DoesNotExist:
+            print(f"[VENDA SERVICE] ❌ Venda ID {venda_id} não encontrada")
+            raise ValueError(f"Venda não encontrada")

@@ -1,18 +1,24 @@
+# ============================================
 # app_controle/views/novavenda_views.py
+# ============================================
 
 from django.shortcuts import render, redirect
 from django.http import JsonResponse, HttpResponse
 from django.contrib import messages
 from ..services.venda_services import VendaService
+from ..services.auth_services import AuthService
 from reportlab.lib.pagesizes import A4
 from reportlab.pdfgen import canvas
 from reportlab.lib.units import mm
 import io
 
+@AuthService.requer_login
 def nova_venda(request):
     """Página de nova venda"""
-    return render(request, 'nova_venda.html')
+    loja = AuthService.loja_logada(request)
+    return render(request, 'nova_venda.html', {'loja': loja})
 
+@AuthService.requer_login
 def buscar_clientes(request):
     """API para buscar clientes (autocomplete)"""
     try:
@@ -21,6 +27,7 @@ def buscar_clientes(request):
     except Exception as e:
         return JsonResponse({'success': False, 'message': str(e)}, status=400)
 
+@AuthService.requer_login
 def buscar_produtos(request):
     """API para buscar produtos (autocomplete)"""
     try:
@@ -29,6 +36,7 @@ def buscar_produtos(request):
     except Exception as e:
         return JsonResponse({'success': False, 'message': str(e)}, status=400)
 
+@AuthService.requer_login
 def buscar_formas_pagamento(request):
     """API para buscar formas de pagamento"""
     try:
@@ -37,6 +45,7 @@ def buscar_formas_pagamento(request):
     except Exception as e:
         return JsonResponse({'success': False, 'message': str(e)}, status=400)
 
+@AuthService.requer_login
 def criar_venda(request):
     """Cria uma nova venda"""
     if request.method == 'POST':
@@ -48,7 +57,6 @@ def criar_venda(request):
             print("[VIEW] Criando nova venda")
             print(f"Dados recebidos: {dados}")
             
-            # Validações
             if not dados.get('cliente_id'):
                 return JsonResponse({'success': False, 'message': 'Selecione um cliente'}, status=400)
             
@@ -58,7 +66,6 @@ def criar_venda(request):
             if not dados.get('forma_pagamento_id'):
                 return JsonResponse({'success': False, 'message': 'Selecione uma forma de pagamento'}, status=400)
             
-            # Criar venda
             venda = VendaService.criar_venda(dados)
             
             print(f"[VIEW] Venda criada com sucesso! ID: {venda.idVENDA}")
@@ -81,24 +88,32 @@ def criar_venda(request):
     
     return JsonResponse({'success': False, 'message': 'Método não permitido'}, status=405)
 
+@AuthService.requer_login
 def gerar_pdf_venda(request, venda_id):
     """Gera e faz download da nota fiscal em PDF"""
     try:
         print(f"[PDF] Gerando nota fiscal para venda #{venda_id}")
         venda = VendaService.buscar_venda(venda_id)
+        loja = AuthService.loja_logada(request)
         
-        # Criar PDF em memória
         buffer = io.BytesIO()
         pdf = canvas.Canvas(buffer, pagesize=A4)
         width, height = A4
         
-        # Configurações
         y = height - 50
         
-        # ===== CABEÇALHO =====
+        # CABEÇALHO
         pdf.setFont("Helvetica-Bold", 24)
         pdf.drawString(50, y, "NOTA FISCAL DE VENDA")
-        y -= 50
+        y -= 30
+        
+        # Dados da Loja
+        pdf.setFont("Helvetica-Bold", 12)
+        pdf.drawString(50, y, f"Loja: {loja.NOME_LOJA}")
+        y -= 15
+        pdf.setFont("Helvetica", 10)
+        pdf.drawString(50, y, f"CNPJ: {loja.CNPJ}")
+        y -= 30
         
         # ID da Venda
         pdf.setFont("Helvetica-Bold", 14)
@@ -110,7 +125,7 @@ def gerar_pdf_venda(request, venda_id):
         pdf.drawString(50, y, f"Data: {venda.DT_VENDA.strftime('%d/%m/%Y às %H:%M')}")
         y -= 40
         
-        # ===== INFORMAÇÕES DO CLIENTE =====
+        # INFORMAÇÕES DO CLIENTE
         pdf.setFont("Helvetica-Bold", 12)
         pdf.drawString(50, y, "DADOS DO CLIENTE")
         y -= 20
@@ -123,16 +138,16 @@ def gerar_pdf_venda(request, venda_id):
         pdf.drawString(70, y, f"Telefone: {venda.CLIENTE_idCLIENTE.TELEFONE}")
         y -= 35
         
-        # ===== FORMA DE PAGAMENTO =====
+        # FORMA DE PAGAMENTO
         pdf.setFont("Helvetica-Bold", 12)
         pdf.drawString(50, y, f"Forma de Pagamento: {venda.PAGAMENTO_idPAGAMENTO.TP_PAGAMENTO}")
         y -= 35
         
-        # ===== LINHA SEPARADORA =====
+        # LINHA SEPARADORA
         pdf.line(50, y, width - 50, y)
         y -= 30
         
-        # ===== VALORES =====
+        # VALORES
         pdf.setFont("Helvetica-Bold", 14)
         pdf.drawString(50, y, "RESUMO DO PAGAMENTO")
         y -= 25
@@ -146,17 +161,17 @@ def gerar_pdf_venda(request, venda_id):
         pdf.drawString(350, y, f"R$ {venda.VLR_TOTAL:.2f}")
         y -= 40
         
-        # ===== LINHA SEPARADORA =====
+        # LINHA SEPARADORA
         pdf.setFont("Helvetica", 10)
         pdf.line(50, y, width - 50, y)
         y -= 30
         
-        # ===== ASSINATURA =====
+        # ASSINATURA
         pdf.drawString(50, y, "_" * 40)
         y -= 15
         pdf.drawString(50, y, "Assinatura do Cliente")
         
-        # ===== RODAPÉ =====
+        # RODAPÉ
         pdf.setFont("Helvetica", 8)
         pdf.drawString(50, 40, "Sistema de Gerenciamento de Vendas")
         pdf.drawString(50, 30, f"Documento gerado em {venda.DT_VENDA.strftime('%d/%m/%Y às %H:%M')}")
@@ -165,7 +180,6 @@ def gerar_pdf_venda(request, venda_id):
         pdf.showPage()
         pdf.save()
         
-        # Retornar PDF para download
         buffer.seek(0)
         response = HttpResponse(buffer.getvalue(), content_type='application/pdf')
         response['Content-Disposition'] = f'attachment; filename="NotaFiscal_V-{venda.idVENDA:05d}.pdf"'

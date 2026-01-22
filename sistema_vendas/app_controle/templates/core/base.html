@@ -23,13 +23,18 @@
             <li><a href="{% url 'clientes' %}" class="{% if request.path == '/clientes/' %}active{% endif %}">Clientes</a></li>
         </ul>
         
-        <div class="store-info">
-            <strong>Minha Loja LTDA</strong>
-            <p style="font-size: 14px; color: #555;">CNPJ: 00.000.000/0001-00</p>
+        <div class="loja-info">
+            {% if loja %}
+                <h3>{{ loja.NOME_LOJA }}</h3>
+                <p>CNPJ: {{ loja.CNPJ }}</p>
+            {% else %}
+                <h3>Minha Loja LTDA</h3>
+                <p>CNPJ: 00.000.000/0001-00</p>
+            {% endif %}
         </div>
         
         <ul class="menu" style="margin-top: 20px;">
-           <li><a href="{% url 'logout' %}" class="logout">Sair do Sistema</a></li>
+           <li><a href="{% url 'logout' %}" class="logout" onclick="return confirm('Deseja realmente sair do sistema?');">Sair do Sistema</a></li>
         </ul>
     </nav>
 
@@ -39,7 +44,7 @@
     </main>
 
     <script src="{% static 'js/main.js' %}"></script>
-    
+
     {% block scripts %}
     {% endblock %}
 </body>

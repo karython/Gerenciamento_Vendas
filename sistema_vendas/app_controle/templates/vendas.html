@@ -8,13 +8,25 @@
     <h1>Histórico de Vendas</h1>
     <div class="header-right">
         <form id="form-filtro" method="GET" class="filtro-form">
+            <!-- Busca por Nome -->
+            <div class="filtro-group">
+                <label>Buscar Cliente:</label>
+                <input type="text" 
+                       name="busca_nome" 
+                       id="busca-nome" 
+                       class="input-busca"
+                       value="{% if busca_nome %}{{ busca_nome }}{% endif %}"
+                       placeholder="Digite o nome ou CPF">
+            </div>
+            
+            <!-- Filtro de Data -->
             <div class="filtro-group">
                 <label>De:</label>
                 <input type="date" 
                        name="data_inicio" 
                        id="data-inicio" 
                        class="input-data"
-                       value="{{ data_inicio }}">
+                       value="{% if data_inicio %}{{ data_inicio }}{% endif %}">
             </div>
             <div class="filtro-group">
                 <label>Até:</label>
@@ -22,19 +34,36 @@
                        name="data_fim" 
                        id="data-fim" 
                        class="input-data"
-                       value="{{ data_fim }}">
+                       value="{% if data_fim %}{{ data_fim }}{% endif %}">
             </div>
+            
             <button type="submit" class="btn-filtrar">🔍 Filtrar</button>
             <button type="button" class="btn-limpar" onclick="limparFiltros()">✖ Limpar</button>
         </form>
     </div>
 </div>
 
+<!-- Barra de seleção múltipla -->
+<div id="barra-selecao" class="barra-selecao" style="display: none;">
+    <div class="selecao-info">
+        <span id="contador-selecionados">0</span> venda(s) selecionada(s)
+    </div>
+    <div class="selecao-acoes">
+        <button class="btn-deletar-multiplas" onclick="deletarSelecionadas()">
+            🗑️ Deletar Selecionadas
+        </button>
+        <button class="btn-cancelar" onclick="cancelarSelecao()">
+            Cancelar
+        </button>
+    </div>
+</div>
+
 <!-- Badge de filtros ativos -->
-{% if data_inicio or data_fim %}
+{% if data_inicio or data_fim or busca_nome %}
 <div class="filtros-ativos">
     <span class="badge-filtro">
-        📅 Filtro ativo: 
+        📅 Filtros ativos: 
+        {% if busca_nome %}Busca: "{{ busca_nome }}"{% endif %}
         {% if data_inicio %}de {{ data_inicio|date:"d/m/Y" }}{% endif %}
         {% if data_fim %}até {{ data_fim|date:"d/m/Y" }}{% endif %}
     </span>
@@ -46,6 +75,9 @@
     <table class="tabela-vendas">
         <thead>
             <tr>
+                <th style="width: 40px;">
+                    <input type="checkbox" id="selecionar-todos" onchange="selecionarTodas(this)">
+                </th>
                 <th>ID Venda</th>
                 <th>Data</th>
                 <th>Cliente</th>
@@ -56,26 +88,46 @@
         </thead>
         <tbody>
             {% for venda in vendas %}
+            {% with venda_formatada="V-"|add:venda.idVENDA|stringformat:'05d' %}
             <tr>
-                <td>V-{{ venda.idVENDA|stringformat:"05d" }}</td>
+                <td>
+                    <input type="checkbox"
+                        class="checkbox-venda"
+                        value="{{ venda.idVENDA }}"
+                        onchange="atualizarSelecao()">
+                </td>
+
+                <td>{{ venda_formatada }}</td>
                 <td>{{ venda.DT_VENDA|date:"d/m/Y H:i" }}</td>
                 <td>{{ venda.CLIENTE_idCLIENTE.NOME_CLIENTE }}</td>
                 <td>R$ {{ venda.VLR_TOTAL|floatformat:2 }}</td>
                 <td>{{ venda.PAGAMENTO_idPAGAMENTO.TP_PAGAMENTO }}</td>
+
                 <td>
-                    <a href="#" class="link-acao" onclick="verDetalhes('{{ venda.idVENDA }}'); return false;">Ver Detalhes</a>
+                    <a href="#"
+                    class="link-acao"
+                    onclick="verDetalhes('{{ venda.idVENDA }}'); return false;">
+                        Ver Detalhes
+                    </a>
                     /
-                    <a href="{% url 'gerar_pdf_venda' venda.idVENDA %}" class="link-acao" target="_blank">Reimprimir</a>
+                    <a href="{% url 'gerar_pdf_venda' venda.idVENDA %}"
+                    class="link-acao"
+                    target="_blank">
+                        Reimprimir
+                    </a>
+                    /
+                    <a href="#"
+                    class="link-acao link-deletar"
+                    onclick="deletarVenda('{{ venda.idVENDA }}', '{{ venda_formatada }}'); return false;">
+                        Deletar
+                    </a>
                 </td>
             </tr>
+            {% endwith %}
             {% empty %}
             <tr>
-                <td colspan="6" style="text-align: center; padding: 30px;">
-                    {% if data_inicio or data_fim %}
-                        Nenhuma venda encontrada no período selecionado
-                    {% else %}
-                        Nenhuma venda registrada
-                    {% endif %}
+                <td colspan="7" style="text-align: center; padding: 30px;">
+                    Nenhuma venda registrada
                 </td>
             </tr>
             {% endfor %}
@@ -120,13 +172,130 @@
 // Carregar dados das vendas
 const vendasData = JSON.parse(document.getElementById('vendas-data').textContent);
 
+// ========== SELEÇÃO MÚLTIPLA ==========
+function selecionarTodas(checkbox) {
+    const checkboxes = document.querySelectorAll('.checkbox-venda');
+    checkboxes.forEach(cb => {
+        cb.checked = checkbox.checked;
+    });
+    atualizarSelecao();
+}
+
+function atualizarSelecao() {
+    const checkboxes = document.querySelectorAll('.checkbox-venda:checked');
+    const quantidade = checkboxes.length;
+    
+    document.getElementById('contador-selecionados').textContent = quantidade;
+    
+    if (quantidade > 0) {
+        document.getElementById('barra-selecao').style.display = 'flex';
+    } else {
+        document.getElementById('barra-selecao').style.display = 'none';
+    }
+}
+
+function cancelarSelecao() {
+    document.querySelectorAll('.checkbox-venda').forEach(cb => cb.checked = false);
+    document.getElementById('selecionar-todos').checked = false;
+    atualizarSelecao();
+}
+
+// ✅ VERSÃO CORRIGIDA - Deleta uma por vez (sequencialmente)
+async function deletarSelecionadas() {
+    const checkboxes = document.querySelectorAll('.checkbox-venda:checked');
+    const vendasIds = Array.from(checkboxes).map(cb => parseInt(cb.value));
+    
+    if (vendasIds.length === 0) {
+        alert('Nenhuma venda selecionada!');
+        return;
+    }
+    
+    if (!confirm(`⚠️ Tem certeza que deseja deletar ${vendasIds.length} venda(s)?\n\nEsta ação não pode ser desfeita!`)) {
+        return;
+    }
+    
+    console.log(`Deletando ${vendasIds.length} vendas sequencialmente...`);
+    
+    let deletadas = 0;
+    let erros = [];
+    
+    // Deletar uma por vez para evitar "database is locked" do SQLite
+    for (const vendaId of vendasIds) {
+        try {
+            console.log(`Deletando venda ${vendaId}...`);
+            
+            const response = await fetch(`/vendas/deletar/${vendaId}/`, {
+                method: 'POST',
+                headers: {
+                    'X-CSRFToken': getCookie('csrftoken'),
+                    'Content-Type': 'application/json'
+                }
+            });
+            
+            const data = await response.json();
+            
+            if (data.success) {
+                deletadas++;
+                console.log(`✅ Venda ${vendaId} deletada`);
+            } else {
+                erros.push(`Venda ${vendaId}: ${data.message}`);
+                console.error(`❌ Erro na venda ${vendaId}:`, data.message);
+            }
+        } catch (error) {
+            erros.push(`Venda ${vendaId}: ${error.message}`);
+            console.error(`❌ Erro na venda ${vendaId}:`, error);
+        }
+        
+        // Pequeno delay entre cada operação (100ms) para garantir que o banco não trave
+        await new Promise(resolve => setTimeout(resolve, 100));
+    }
+    
+    // Mostrar resultado
+    if (erros.length > 0) {
+        alert(`⚠️ Resultado:\n\n✅ ${deletadas} venda(s) deletada(s) com sucesso\n❌ ${erros.length} erro(s) encontrado(s):\n\n${erros.join('\n')}`);
+    } else {
+        alert(`✅ Todas as ${deletadas} venda(s) foram deletadas com sucesso!`);
+    }
+    
+    // Recarregar página
+    location.reload();
+}
+
+// ========== DELETAR INDIVIDUAL ==========
+function deletarVenda(vendaId, vendaNumero) {
+    if (!confirm(`⚠️ Tem certeza que deseja deletar a venda ${vendaNumero}?\n\nEsta ação não pode ser desfeita!`)) {
+        return;
+    }
+    
+    console.log(`Deletando venda ID: ${vendaId}`);
+    
+    fetch(`/vendas/deletar/${vendaId}/`, {
+        method: 'POST',
+        headers: {
+            'X-CSRFToken': getCookie('csrftoken'),
+            'Content-Type': 'application/json'
+        }
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            alert(data.message);
+            location.reload();
+        } else {
+            alert(`❌ ${data.message}`);
+        }
+    })
+    .catch(error => {
+        console.error('Erro:', error);
+        alert('❌ Erro ao deletar venda. Tente novamente.');
+    });
+}
+
+// ========== MODAL DETALHES ==========
 function verDetalhes(vendaId) {
     console.log('Ver detalhes da venda:', vendaId);
     
-    // Converter vendaId para número
     const id = parseInt(vendaId);
-    
-    // Buscar venda nos dados
     const venda = vendasData.find(v => v.id === id);
     
     if (!venda) {
@@ -134,7 +303,6 @@ function verDetalhes(vendaId) {
         return;
     }
     
-    // Montar HTML dos detalhes
     const html = `
         <div class="detalhes-venda">
             <p><strong>ID Venda:</strong> ${venda.idFormatado}</p>
@@ -166,8 +334,23 @@ function fecharModal() {
 }
 
 function limparFiltros() {
-    // Limpa os campos e recarrega a página sem parâmetros
     window.location.href = window.location.pathname;
+}
+
+// Função auxiliar para pegar o CSRF token
+function getCookie(name) {
+    let cookieValue = null;
+    if (document.cookie && document.cookie !== '') {
+        const cookies = document.cookie.split(';');
+        for (let i = 0; i < cookies.length; i++) {
+            const cookie = cookies[i].trim();
+            if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                break;
+            }
+        }
+    }
+    return cookieValue;
 }
 
 // Fechar modal ao clicar fora
@@ -177,7 +360,7 @@ document.getElementById('modal-detalhes').addEventListener('click', function(e) 
     }
 });
 
-// Validação de datas (data fim não pode ser anterior à data início)
+// Validação de datas
 document.getElementById('data-fim').addEventListener('change', function() {
     const dataInicio = document.getElementById('data-inicio').value;
     const dataFim = this.value;
@@ -185,22 +368,6 @@ document.getElementById('data-fim').addEventListener('change', function() {
     if (dataInicio && dataFim && dataFim < dataInicio) {
         alert('A data final não pode ser anterior à data inicial!');
         this.value = '';
-    }
-});
-
-// Auto-submit quando selecionar data de início e fim já estiver preenchida
-document.getElementById('data-inicio').addEventListener('change', function() {
-    const dataFim = document.getElementById('data-fim').value;
-    if (dataFim) {
-        document.getElementById('form-filtro').submit();
-    }
-});
-
-// Auto-submit quando selecionar data de fim e início já estiver preenchida
-document.getElementById('data-fim').addEventListener('change', function() {
-    const dataInicio = document.getElementById('data-inicio').value;
-    if (dataInicio) {
-        document.getElementById('form-filtro').submit();
     }
 });
 </script>
@@ -211,6 +378,8 @@ document.getElementById('data-fim').addEventListener('change', function() {
     justify-content: space-between;
     align-items: center;
     margin-bottom: 20px;
+    flex-wrap: wrap;
+    gap: 15px;
 }
 
 .header-vendas h1 {
@@ -228,6 +397,7 @@ document.getElementById('data-fim').addEventListener('change', function() {
     display: flex;
     gap: 10px;
     align-items: center;
+    flex-wrap: wrap;
 }
 
 .filtro-group {
@@ -242,7 +412,8 @@ document.getElementById('data-fim').addEventListener('change', function() {
     font-weight: 500;
 }
 
-.input-data {
+.input-data,
+.input-busca {
     padding: 8px 12px;
     border: 1px solid #ccc;
     border-radius: 4px;
@@ -250,7 +421,12 @@ document.getElementById('data-fim').addEventListener('change', function() {
     min-width: 150px;
 }
 
-.input-data:focus {
+.input-busca {
+    min-width: 200px;
+}
+
+.input-data:focus,
+.input-busca:focus {
     outline: none;
     border-color: #007bff;
     box-shadow: 0 0 0 3px rgba(0, 123, 255, 0.1);
@@ -285,6 +461,58 @@ document.getElementById('data-fim').addEventListener('change', function() {
 }
 
 .btn-limpar:hover {
+    background: #5a6268;
+}
+
+/* Barra de seleção múltipla */
+.barra-selecao {
+    background: #fff3cd;
+    border: 1px solid #ffc107;
+    border-radius: 6px;
+    padding: 12px 16px;
+    margin-bottom: 15px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.selecao-info {
+    font-weight: 600;
+    color: #856404;
+}
+
+.selecao-acoes {
+    display: flex;
+    gap: 10px;
+}
+
+.btn-deletar-multiplas {
+    padding: 8px 16px;
+    background: #dc3545;
+    color: white;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 14px;
+    font-weight: 500;
+}
+
+.btn-deletar-multiplas:hover {
+    background: #c82333;
+}
+
+.btn-cancelar {
+    padding: 8px 16px;
+    background: #6c757d;
+    color: white;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 14px;
+    font-weight: 500;
+}
+
+.btn-cancelar:hover {
     background: #5a6268;
 }
 
@@ -348,6 +576,14 @@ document.getElementById('data-fim').addEventListener('change', function() {
 
 .link-acao:hover {
     text-decoration: underline;
+}
+
+.link-deletar {
+    color: #dc3545;
+}
+
+.link-deletar:hover {
+    color: #a71d2a;
 }
 
 /* Modal */
@@ -430,22 +666,36 @@ document.getElementById('data-fim').addEventListener('change', function() {
     background: #0056b3;
 }
 
-/* Responsividade */
+/* Responsive */
 @media (max-width: 768px) {
     .header-vendas {
         flex-direction: column;
-        gap: 15px;
         align-items: flex-start;
     }
     
     .filtro-form {
-        flex-wrap: wrap;
+        width: 100%;
     }
     
-    .filtros-ativos {
+    .filtro-group {
+        flex: 1;
+        min-width: 120px;
+    }
+    
+    .filtros-ativos,
+    .barra-selecao {
         flex-direction: column;
         gap: 10px;
         align-items: flex-start;
+    }
+    
+    .selecao-acoes {
+        width: 100%;
+    }
+    
+    .btn-deletar-multiplas,
+    .btn-cancelar {
+        flex: 1;
     }
 }
 </style>

@@ -48,6 +48,7 @@ MIDDLEWARE = [
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
+    'app_controle.middleware.SessionExpireMiddleware',
 ]
 
 ROOT_URLCONF = 'sistema_vendas.urls'
@@ -129,3 +130,28 @@ STATIC_ROOT = BASE_DIR / "staticfiles"
 # https://docs.djangoproject.com/en/5.2/ref/settings/#default-auto-field
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
+
+# ============================================
+# CONFIGURAÇÕES DE SESSÃO
+# ============================================
+
+# Sessão expira ao fechar o navegador
+SESSION_EXPIRE_AT_BROWSER_CLOSE = True
+
+# Tempo de vida da sessão em segundos (opcional, caso queira limite de tempo também)
+# SESSION_COOKIE_AGE = 3600  # 1 hora (descomente se quiser)
+
+# Nome do cookie de sessão
+SESSION_COOKIE_NAME = 'sessionid'
+
+# Cookie de sessão acessível apenas via HTTP (segurança)
+SESSION_COOKIE_HTTPONLY = True
+
+# Cookie seguro apenas em HTTPS (descomente em produção)
+# SESSION_COOKIE_SECURE = True
+
+# Salvar sessão a cada requisição (mantém sessão ativa enquanto usar)
+SESSION_SAVE_EVERY_REQUEST = True
+
+# Backend de sessão (padrão é banco de dados)
+SESSION_ENGINE = 'django.contrib.sessions.backends.db'

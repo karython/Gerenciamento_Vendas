@@ -11,6 +11,7 @@ from .venda import Venda
 from .item_venda import ItemVenda  # ← ADICIONAR
 from .estoque_venda import EstoqueVenda
 from .usuario import Usuario
+from .loja import Loja
 
 __all__ = [
     'Funcionario',
@@ -25,4 +26,5 @@ __all__ = [
     'ItemVenda',  # ← ADICIONAR
     'EstoqueVenda',
     'Usuario',
+    'Loja',
 ]

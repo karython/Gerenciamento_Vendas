@@ -3,7 +3,7 @@
 
 {% block title %}Nova Venda{% endblock %}
 
-{% block content %}
+{% block dashboard_content %}
 <div class="header">
     <h1>Nova Venda / Emissão de Nota</h1>
 </div>
@@ -47,7 +47,6 @@
     <table class="tabela">
         <thead>
             <tr>
-                <th>ID</th>
                 <th>Produto</th>
                 <th>Qtd.</th>
                 <th>Valor Unit.</th>
@@ -57,12 +56,12 @@
         </thead>
         <tbody id="itens-venda">
             <tr id="linha-vazia">
-                <td colspan="6" style="text-align: center;">Nenhum item adicionado</td>
+                <td colspan="5" style="text-align: center;">Nenhum item adicionado</td>
             </tr>
         </tbody>
         <tfoot>
             <tr>
-                <td colspan="4" style="text-align: right; font-weight: bold;">Subtotal</td>
+                <td colspan="3" style="text-align: right; font-weight: bold;">Subtotal</td>
                 <td colspan="2" id="subtotal">R$ 0,00</td>
             </tr>
         </tfoot>

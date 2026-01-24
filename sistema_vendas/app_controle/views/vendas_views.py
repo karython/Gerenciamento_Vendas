@@ -8,9 +8,7 @@ from ..services.auth_services import AuthService
 
 @AuthService.requer_login
 def vendas(request):
-    """Lista todas as vendas com filtros por data e nome"""
-    print("[VIEW] Carregando histórico de vendas...")
-    
+    """Lista todas as vendas com filtros por data e nome - OTIMIZADO"""
     loja = AuthService.loja_logada(request)
     data_inicio = request.GET.get('data_inicio')
     data_fim = request.GET.get('data_fim')
@@ -21,11 +19,6 @@ def vendas(request):
         data_fim=data_fim,
         busca_nome=busca_nome
     )
-    
-    print(f"[VIEW] Total de vendas encontradas: {vendas_lista.count()}")
-    
-    if data_inicio or data_fim or busca_nome:
-        print(f"[VIEW] Filtros aplicados - Início: {data_inicio}, Fim: {data_fim}, Busca: {busca_nome}")
     
     context = {
         'vendas': vendas_lista,

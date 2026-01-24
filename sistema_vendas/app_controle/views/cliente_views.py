@@ -8,16 +8,9 @@ from ..models import Cliente
 
 @AuthService.requer_login
 def listar_clientes(request):
-    """Lista todos os clientes cadastrados"""
-    print("=" * 50)
-    print("[VIEW] Função listar_clientes chamada")
-    
+    """Lista todos os clientes cadastrados - OTIMIZADO"""
     loja = AuthService.loja_logada(request)
     clientes = ClienteService.listar_clientes()
-    
-    print(f"[VIEW] Total de clientes na view: {clientes.count()}")
-    print(f"[VIEW] Clientes: {list(clientes.values('idCLIENTE', 'NOME_CLIENTE', 'CPF'))}")
-    print("=" * 50)
     
     return render(request, 'clientes.html', {
         'clientes': clientes,

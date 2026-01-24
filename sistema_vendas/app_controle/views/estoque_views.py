@@ -12,7 +12,7 @@ from datetime import datetime
 
 @AuthService.requer_login
 def estoque(request):
-    """Lista todos os produtos em estoque"""
+    """Lista todos os produtos em estoque - OTIMIZADO"""
     loja = AuthService.loja_logada(request)
     estoques = EstoqueService.listar_estoque()
     return render(request, 'estoque.html', {
@@ -22,15 +22,11 @@ def estoque(request):
 
 @AuthService.requer_login
 def cadastrar_produto(request):
-    """Cadastra um novo produto no estoque"""
+    """Cadastra um novo produto no estoque - OTIMIZADO"""
     if request.method == 'POST':
         try:
             import json
             dados = json.loads(request.body)
-            
-            print("=" * 50)
-            print("[VIEW] Cadastrando novo produto")
-            print(f"Dados recebidos: {dados}")
             
             if not dados.get('nome'):
                 return JsonResponse({'success': False, 'message': 'Nome do produto é obrigatório'}, status=400)
@@ -42,11 +38,7 @@ def cadastrar_produto(request):
                 return JsonResponse({'success': False, 'message': 'Quantidade inicial inválida'}, status=400)
             
             dados['data_movimentacao'] = datetime.now()
-            
             resultado = EstoqueService.cadastrar_produto_estoque(dados)
-            
-            print(f"[VIEW] Produto cadastrado com sucesso!")
-            print("=" * 50)
             
             return JsonResponse({
                 'success': True,
@@ -61,27 +53,21 @@ def cadastrar_produto(request):
             })
             
         except ValueError as e:
-            print(f"[VIEW] Erro de validação: {str(e)}")
             return JsonResponse({'success': False, 'message': str(e)}, status=400)
         except Exception as e:
-            print(f"[VIEW] Erro ao cadastrar produto: {str(e)}")
-            import traceback
-            traceback.print_exc()
             return JsonResponse({'success': False, 'message': f'Erro: {str(e)}'}, status=500)
     
     return JsonResponse({'success': False, 'message': 'Método não permitido'}, status=405)
 
 @AuthService.requer_login
 def buscar_produto_ajax(request, produto_id):
-    """Busca dados de um produto para edição - AJAX"""
+    """Busca dados de um produto para edição - AJAX OTIMIZADO"""
     if request.method != 'GET':
         return JsonResponse({'success': False, 'message': 'Método inválido'}, status=400)
     
     try:
-        print(f"[VIEW] Buscando produto {produto_id}")
-        
-        produto = get_object_or_404(Produto, idPRODUTO=produto_id)
-        estoque = Estoque.objects.filter(PRODUTO_idPRODUTO=produto).first()
+        produto = get_object_or_404(Produto.objects.only('idPRODUTO', 'DESCRICAO', 'IOF', 'VLR_UNIT'), idPRODUTO=produto_id)
+        estoque = Estoque.objects.filter(PRODUTO_idPRODUTO=produto).only('QTD_DISPONIVEL').first()
         
         if not estoque:
             return JsonResponse({
@@ -89,7 +75,7 @@ def buscar_produto_ajax(request, produto_id):
                 'message': 'Produto sem estoque cadastrado'
             }, status=404)
         
-        dados = {
+        return JsonResponse({
             'success': True,
             'produto': {
                 'id': produto.idPRODUTO,
@@ -98,14 +84,9 @@ def buscar_produto_ajax(request, produto_id):
                 'preco_venda': float(produto.VLR_UNIT) if produto.VLR_UNIT else 0.0,
                 'quantidade': estoque.QTD_DISPONIVEL
             }
-        }
-        
-        print(f"[VIEW] Produto encontrado: {dados}")
-        
-        return JsonResponse(dados)
+        })
         
     except Produto.DoesNotExist:
-        print(f"[VIEW] Produto {produto_id} não encontrado")
         return JsonResponse({
             'success': False,
             'message': 'Produto não encontrado'

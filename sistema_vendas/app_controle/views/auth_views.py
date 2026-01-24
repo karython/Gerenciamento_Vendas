@@ -75,8 +75,8 @@ def login(request):
         if loja:
             # Login bem-sucedido - loja existe no banco e senha está correta
             AuthService.fazer_login(request, loja)
-            messages.success(request, f'✅ Bem-vindo(a), {loja.NOME_LOJA}!')
-            return redirect('home')
+            
+            return redirect('nova_venda')
         else:
             # Credenciais inválidas (CNPJ não existe ou senha incorreta)
             messages.error(request, '❌ CNPJ ou senha incorretos!')
@@ -87,5 +87,11 @@ def login(request):
 def logout(request):
     """Fazer logout"""
     AuthService.fazer_logout(request)
-    messages.success(request, '✅ Logout realizado com sucesso!')
-    return redirect('index')
+    # Limpar todas as mensagens pendentes
+    from django.contrib.messages import get_messages
+    storage = get_messages(request)
+    storage.used = True
+    # Limpar completamente a sessão
+    request.session.flush()
+    
+    return redirect('login')

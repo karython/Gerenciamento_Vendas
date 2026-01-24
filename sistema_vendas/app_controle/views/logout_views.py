@@ -6,4 +6,4 @@ from ..services.cliente_services import ClienteService
 from ..models import Cliente
 
 def logout(request):
-    return render(request, 'logout.html')
+    return redirect('login')

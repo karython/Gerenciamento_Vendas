@@ -76,8 +76,12 @@ WSGI_APPLICATION = 'sistema_vendas.wsgi.application'
 
 DATABASES = {
     'default': {
-        'ENGINE': 'django.db.backends.sqlite3',
-        'NAME': BASE_DIR / 'db.sqlite3',
+        'ENGINE': 'django.db.backends.mysql',
+        'NAME': 'u275872813_gen_estoque',
+        'USER': 'u275872813_admin_estoque',
+        'PASSWORD': 'GestaoEstoque25',
+        'HOST': 'srv1061.hstgr.io',
+        'PORT': '3306',
     }
 }
 

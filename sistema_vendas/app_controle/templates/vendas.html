@@ -3,7 +3,7 @@
 
 {% block title %}Histórico de Vendas{% endblock %}
 
-{% block content %}
+{% block dashboard_content %}
 <div class="header-vendas">
     <h1>Histórico de Vendas</h1>
     <div class="header-right">
@@ -78,7 +78,6 @@
                 <th style="width: 40px;">
                     <input type="checkbox" id="selecionar-todos" onchange="selecionarTodas(this)">
                 </th>
-                <th>ID Venda</th>
                 <th>Data</th>
                 <th>Cliente</th>
                 <th>Valor Total</th>
@@ -126,7 +125,7 @@
             {% endwith %}
             {% empty %}
             <tr>
-                <td colspan="7" style="text-align: center; padding: 30px;">
+                <td colspan="6" style="text-align: center; padding: 30px;">
                     Nenhuma venda registrada
                 </td>
             </tr>

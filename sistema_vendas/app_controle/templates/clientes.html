@@ -3,7 +3,7 @@
 
 {% block title %}Clientes{% endblock %}
 
-{% block content %}
+{% block dashboard_content %}
 
 {% if messages %}
 <ul class="messages">
@@ -73,7 +73,6 @@
     <table class="tabela">
         <thead>
             <tr>
-                <th>ID</th>
                 <th>Nome</th>
                 <th>CPF/CNPJ</th>
                 <th>Telefone</th>
@@ -83,7 +82,6 @@
         <tbody id="tabela-clientes">
             {% for cliente in clientes %}
             <tr data-cliente-id="{{ cliente.idCLIENTE }}">
-                <td>{{ cliente.idCLIENTE }}</td>
                 <td>{{ cliente.NOME_CLIENTE }}</td>
                 <td>{{ cliente.CPF }}</td>
                 <td>{{ cliente.TELEFONE }}</td>
@@ -94,7 +92,7 @@
             </tr>
             {% empty %}
             <tr id="linha-vazia">
-                <td colspan="5" style="text-align: center;">Nenhum cliente cadastrado</td>
+                <td colspan="4" style="text-align: center;">Nenhum cliente cadastrado</td>
             </tr>
             {% endfor %}
         </tbody>

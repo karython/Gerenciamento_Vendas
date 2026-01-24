@@ -15,7 +15,7 @@ from app_controle.views import (
 
 urlpatterns = [
     path('admin/', admin.site.urls),
-    path('', home_views.home, name='home'),
+    path('', novavenda_views.nova_venda, name='nova_venda'),
     path('dashboard/', dashboard_views.dashboard, name='dashboard'),
 
     # === Autenticação (login e cadastro) ===

@@ -4,11 +4,17 @@
 {% block title %}Estoque{% endblock %}
 
 {% block dashboard_content %}
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+
 <div class="header">
     <h1>Estoque</h1>
     <div>
-        <button id="btn-lancar-reposicao" class="btn btn-secondary" style="margin-right: 10px;">Lançar Reposição</button>
-        <button id="btn-cadastrar-produto" class="btn btn-primary">Cadastrar Novo Produto</button>
+        <button id="btn-lancar-reposicao" class="btn btn-secondary" style="margin-right: 10px;">
+            <i class="fas fa-plus-circle"></i> Lançar Reposição
+        </button>
+        <button id="btn-cadastrar-produto" class="btn btn-primary">
+            <i class="fas fa-box"></i> Cadastrar Novo Produto
+        </button>
     </div>
 </div>
 
@@ -21,7 +27,7 @@
                 <th>Preço Venda</th>
                 <th>Qtd. Atual</th>
                 <th>Lucro/Unid.</th>
-                <th>Ações</th>
+                <th style="text-align: center;">Ações</th>
             </tr>
         </thead>
         <tbody id="tabela-estoque">
@@ -32,21 +38,24 @@
                 <td>R$ {{ item.preco_venda|floatformat:2 }}</td>
                 <td class="quantidade">{{ item.quantidade }}</td>
                 <td>R$ {{ item.lucro_unitario|floatformat:2 }}</td>
-                <td>
-                    <a href="#" class="btn-editar" data-id="{{ item.produto_id }}">Editar</a>
-                    <a href="#" class="btn-deletar" data-id="{{ item.produto_id }}" style="color: red; margin-left: 10px;">Deletar</a>
+                <td style="text-align: center;">
+                    <a href="#" class="btn-acao btn-editar" data-id="{{ item.produto_id }}" title="Editar Produto">
+                        <i class="fas fa-edit"></i>
+                    </a>
+                    <a href="#" class="btn-acao btn-deletar" data-id="{{ item.produto_id }}" title="Deletar Produto">
+                        <i class="fas fa-trash-alt"></i>
+                    </a>
                 </td>
             </tr>
             {% empty %}
             <tr id="linha-vazia">
-                <td colspan="6" style="text-align: center;">Nenhum produto cadastrado</td>
+                <td colspan="6" style="text-align: center; padding: 30px;">Nenhum produto cadastrado</td>
             </tr>
             {% endfor %}
         </tbody>
     </table>
 </div>
 
-<!-- Modal Cadastrar Produto -->
 <div id="modal-cadastrar" class="modal">
     <div class="modal-content">
         <span class="close" data-modal="cadastrar">&times;</span>
@@ -76,7 +85,6 @@
     </div>
 </div>
 
-<!-- Modal Editar Produto -->
 <div id="modal-editar" class="modal">
     <div class="modal-content">
         <span class="close" data-modal="editar">&times;</span>
@@ -107,7 +115,6 @@
     </div>
 </div>
 
-<!-- Modal Lançar Reposição -->
 <div id="modal-reposicao" class="modal">
     <div class="modal-content">
         <span class="close" data-modal="reposicao">&times;</span>
@@ -209,11 +216,13 @@ document.getElementById('form-cadastrar-produto').addEventListener('submit', asy
     }
 });
 
-// Editar Produto - Abrir Modal
+// Editar Produto - Abrir Modal (ATUALIZADO PARA ÍCONES)
 document.addEventListener('click', async function(e) {
-    if (e.target.classList.contains('btn-editar')) {
+    const btnEditar = e.target.closest('.btn-editar'); // Detecta clique no botão ou ícone
+    
+    if (btnEditar) {
         e.preventDefault();
-        const produtoId = e.target.dataset.id;
+        const produtoId = btnEditar.dataset.id;
         
         try {
             const response = await fetch(`/estoque/buscar/${produtoId}/`);
@@ -271,16 +280,20 @@ document.getElementById('form-editar-produto').addEventListener('submit', async 
     }
 });
 
-// Deletar Produto
+// Deletar Produto (ATUALIZADO PARA ÍCONES)
 document.addEventListener('click', async function(e) {
-    if (e.target.classList.contains('btn-deletar')) {
+    const btnDeletar = e.target.closest('.btn-deletar'); // Detecta clique no botão ou ícone
+    
+    if (btnDeletar) {
         e.preventDefault();
         
-        if (!confirm('Tem certeza que deseja deletar este produto do estoque?')) {
+        const nomeProduto = btnDeletar.closest('tr').querySelector('td').innerText;
+        
+        if (!confirm(`Tem certeza que deseja deletar o produto "${nomeProduto}" do estoque?`)) {
             return;
         }
         
-        const produtoId = e.target.dataset.id;
+        const produtoId = btnDeletar.dataset.id;
         
         try {
             const response = await fetch(`/estoque/deletar/${produtoId}/`, {
@@ -298,12 +311,12 @@ document.addEventListener('click', async function(e) {
                 
                 // Remover linha da tabela
                 const linha = document.querySelector(`tr[data-produto-id="${produtoId}"]`);
-                linha.remove();
+                if(linha) linha.remove();
                 
                 // Se não houver mais produtos, mostrar mensagem
                 const tbody = document.getElementById('tabela-estoque');
                 if (tbody.children.length === 0) {
-                    tbody.innerHTML = '<tr id="linha-vazia"><td colspan="7" style="text-align: center;">Nenhum produto cadastrado</td></tr>';
+                    tbody.innerHTML = '<tr id="linha-vazia"><td colspan="6" style="text-align: center;">Nenhum produto cadastrado</td></tr>';
                 }
             } else {
                 alert('Erro: ' + result.message);
@@ -356,6 +369,38 @@ document.getElementById('form-reposicao').addEventListener('submit', async funct
 </script>
 
 <style>
+/* Estilos para os Botões de Ação (Ícones) */
+.btn-acao {
+    border: none;
+    background: none;
+    cursor: pointer;
+    font-size: 1.1rem;
+    margin: 0 8px;
+    transition: transform 0.2s, color 0.2s;
+    display: inline-block;
+}
+
+/* Ícone Editar (Azul) */
+.btn-editar {
+    color: #007bff;
+}
+.btn-editar:hover {
+    color: #0056b3;
+    transform: scale(1.15);
+    background-color: transparent; /* Remove cor de fundo antiga */
+}
+
+/* Ícone Deletar (Vermelho) */
+.btn-deletar {
+    color: #dc3545;
+}
+.btn-deletar:hover {
+    color: #a71d2a;
+    transform: scale(1.15);
+    background-color: transparent; /* Remove cor de fundo antiga */
+}
+
+/* --- Estilos Gerais --- */
 .header {
     display: flex;
     justify-content: space-between;
@@ -412,23 +457,9 @@ document.getElementById('form-reposicao').addEventListener('submit', async funct
     color: #2c3e50;
 }
 
-.btn-editar, .btn-deletar {
-    cursor: pointer;
-    text-decoration: none;
-    padding: 5px 10px;
-    border-radius: 4px;
-}
-
-.btn-editar {
-    color: #007bff;
-}
-
-.btn-editar:hover {
-    background-color: #e7f3ff;
-}
-
-.btn-deletar:hover {
-    background-color: #ffe7e7;
+/* Ajuste alinhamento tabela */
+.tabela tbody td {
+    vertical-align: middle;
 }
 </style>
 {% endblock %}

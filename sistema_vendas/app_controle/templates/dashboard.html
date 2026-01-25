@@ -4,126 +4,318 @@
 {% block title %}Dashboard{% endblock %}
 
 {% block dashboard_content %}
-<div class="header">
-    <h1>Dashboard</h1>
-    <p style="color: var(--color-gray-dark); margin-top: 5px;">Bem-vindo(a), <strong>{{ loja.NOME_LOJA }}</strong></p>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+
+<div class="dashboard-container">
+    
+    <div class="header-dashboard">
+        <div>
+            <h1>Visão Geral</h1>
+            <p class="subtitle">Bem-vindo(a), <strong>{{ loja.NOME_LOJA }}</strong>. Aqui estão seus resultados.</p>
+        </div>
+        <div class="date-badge">
+            <i class="far fa-calendar-alt"></i> Hoje: {% now "d/m/Y" %}
+        </div>
+    </div>
+
+    <div class="stats-grid">
+        <div class="stat-card">
+            <div class="stat-icon icon-blue">
+                <i class="fas fa-file-invoice-dollar"></i>
+            </div>
+            <div class="stat-info">
+                <h3>Receita Bruta (Mês)</h3>
+                <div class="valor">R$ {{ receita_bruta }}</div>
+                <span class="stat-desc">Faturamento total</span>
+            </div>
+        </div>
+
+        <div class="stat-card">
+            <div class="stat-icon icon-green">
+                <i class="fas fa-wallet"></i>
+            </div>
+            <div class="stat-info">
+                <h3>Receita Líquida (Mês)</h3>
+                <div class="valor">R$ {{ receita_liquida }}</div>
+                <span class="stat-desc">Lucro estimado</span>
+            </div>
+        </div>
+
+        <div class="stat-card">
+            <div class="stat-icon icon-orange">
+                <i class="fas fa-shopping-cart"></i>
+            </div>
+            <div class="stat-info">
+                <h3>Vendas (Mês)</h3>
+                <div class="valor">{{ total_vendas }}</div>
+                <span class="stat-desc">Pedidos realizados</span>
+            </div>
+        </div>
+
+        <div class="stat-card">
+            <div class="stat-icon icon-purple">
+                <i class="fas fa-boxes"></i>
+            </div>
+            <div class="stat-info">
+                <h3>Estoque Total</h3>
+                <div class="valor">{{ total_estoque }}</div>
+                <span class="stat-desc">Itens disponíveis</span>
+            </div>
+        </div>
+    </div>
+
+    <div class="charts-container">
+        
+        <div class="card chart-card">
+            <div class="chart-header">
+                <h3><i class="fas fa-chart-line"></i> Desempenho de Vendas</h3>
+                <span>Últimos 30 dias</span>
+            </div>
+            <div class="chart-body">
+                <canvas id="graficoVendas"></canvas>
+            </div>
+        </div>
+
+        <div class="card chart-card">
+            <div class="chart-header">
+                <h3><i class="fas fa-chart-pie"></i> Composição Financeira</h3>
+                <span>Bruto vs. Líquido</span>
+            </div>
+            <div class="chart-body" style="height: 350px;"> <canvas id="graficoReceita"></canvas>
+            </div>
+        </div>
+
+    </div>
 </div>
 
-<div class="stats-grid">
-    <div class="stat-card">
-        <h3>Receita Bruta (Mês)</h3>
-        <div class="valor">R$ {{ receita_bruta }}</div>
-    </div>
-    <div class="stat-card">
-        <h3>Receita Líquida (Mês)</h3>
-        <div class="valor">R$ {{ receita_liquida }}</div>
-    </div>
-    <div class="stat-card">
-        <h3>Vendas Realizadas (Mês)</h3>
-        <div class="valor">{{ total_vendas }}</div>
-    </div>
-    <div class="stat-card">
-        <h3>Itens em Estoque</h3>
-        <div class="valor">{{ total_estoque }}</div>
-    </div>
-</div>
-
-<div class="card">
-    <div class="chart-container">
-        <h3>Vendas por Dia (Últimos 30 dias)</h3>
-        <canvas id="graficoVendas"></canvas>
-    </div>
-</div>
-
-<div class="card" style="margin-top: 20px;">
-    <div class="chart-container">
-        <h3>Receita (Bruta vs. Líquida) - Mês</h3>
-        <canvas id="graficoReceita"></canvas>
-    </div>
-</div>
 {% endblock %}
 
 {% block scripts %}
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <script>
-// Gráfico de Vendas por Dia
-const ctxVendas = document.getElementById('graficoVendas').getContext('2d');
-new Chart(ctxVendas, {
-    type: 'line',
-    data: {
-        labels: {{ datas_vendas|safe }},
-        datasets: [{
-            label: 'Quantidade de Vendas',
-            data: {{ valores_vendas|safe }},
-            borderColor: 'var(--color-green-dark)',
-            backgroundColor: 'rgba(46, 125, 50, 0.1)',
-            tension: 0.4,
-            fill: true,
-            pointRadius: 4,
-            pointBackgroundColor: 'var(--color-green-dark)',
-            pointBorderColor: '#fff',
-            pointBorderWidth: 2
-        }]
-    },
-    options: {
-        responsive: true,
-        maintainAspectRatio: true,
-        plugins: {
-            legend: {
-                display: true,
-                labels: {
-                    color: 'var(--color-gray-dark)',
-                    font: { size: 12 }
-                }
-            }
-        },
-        scales: {
-            y: {
-                beginAtZero: true,
-                ticks: { color: 'var(--color-gray-dark)' },
-                grid: { color: 'rgba(200, 200, 200, 0.1)' }
-            },
-            x: {
-                ticks: { color: 'var(--color-gray-dark)' },
-                grid: { color: 'rgba(200, 200, 200, 0.1)' }
-            }
-        }
-    }
-});
+    // --- Configuração Comum ---
+    Chart.defaults.font.family = "'Segoe UI', 'Helvetica Neue', 'Arial', sans-serif";
+    Chart.defaults.color = '#666';
+    
+    // --- Gráfico de Vendas (Linha com Degradê) ---
+    const ctxVendas = document.getElementById('graficoVendas').getContext('2d');
+    
+    let gradientVendas = ctxVendas.createLinearGradient(0, 0, 0, 400);
+    gradientVendas.addColorStop(0, 'rgba(46, 204, 113, 0.5)'); 
+    gradientVendas.addColorStop(1, 'rgba(46, 204, 113, 0.0)');
 
-// Gráfico de Receita Bruta vs Líquida
-const ctxReceita = document.getElementById('graficoReceita').getContext('2d');
-new Chart(ctxReceita, {
-    type: 'doughnut',
-    data: {
-        labels: ['Receita Bruta', 'Descontos'],
-        datasets: [{
-            data: [
-                parseFloat('{{ receita_bruta_30 }}'.replace(',', '.')),
-                parseFloat('{{ receita_bruta_30 }}'.replace(',', '.')) - parseFloat('{{ receita_liquida_30 }}'.replace(',', '.'))
-            ],
-            backgroundColor: [
-                'var(--color-green-dark)',
-                'var(--color-brown-medium)'
-            ],
-            borderColor: '#fff',
-            borderWidth: 2
-        }]
-    },
-    options: {
-        responsive: true,
-        maintainAspectRatio: true,
-        plugins: {
-            legend: {
-                position: 'bottom',
-                labels: {
-                    color: 'var(--color-gray-dark)',
-                    font: { size: 12 },
-                    padding: 15
+    new Chart(ctxVendas, {
+        type: 'line',
+        data: {
+            labels: {{ datas_vendas|safe }},
+            datasets: [{
+                label: 'Vendas',
+                data: {{ valores_vendas|safe }},
+                borderColor: '#27ae60',
+                backgroundColor: gradientVendas,
+                borderWidth: 3,
+                tension: 0.4,
+                fill: true,
+                pointBackgroundColor: '#fff',
+                pointBorderColor: '#27ae60',
+                pointBorderWidth: 2,
+                pointRadius: 4,
+                pointHoverRadius: 6
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: { display: false },
+                tooltip: {
+                    backgroundColor: 'rgba(0, 0, 0, 0.8)',
+                    padding: 12,
+                    displayColors: false,
+                    callbacks: { label: (c) => c.parsed.y + ' Vendas' }
+                }
+            },
+            scales: {
+                y: {
+                    beginAtZero: true,
+                    grid: { borderDash: [5, 5], color: '#f0f0f0' },
+                    ticks: { padding: 10 }
+                },
+                x: {
+                    grid: { display: false },
+                    ticks: { padding: 10 }
                 }
             }
         }
-    }
-});
+    });
+
+    // --- Gráfico de Receita (Doughnut) ---
+    const ctxReceita = document.getElementById('graficoReceita').getContext('2d');
+    
+    const receitaBrutaRaw = parseFloat('{{ receita_bruta_30 }}'.replace(',', '.') || 0);
+    const receitaLiquidaRaw = parseFloat('{{ receita_liquida_30 }}'.replace(',', '.') || 0);
+    const diferencaDescontos = receitaBrutaRaw - receitaLiquidaRaw;
+
+    new Chart(ctxReceita, {
+        type: 'doughnut',
+        data: {
+            labels: ['Receita Líquida', 'Custos/Descontos'],
+            datasets: [{
+                data: [receitaLiquidaRaw, diferencaDescontos],
+                backgroundColor: ['#27ae60', '#ecf0f1'],
+                borderWidth: 0,
+                hoverOffset: 4
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            cutout: '70%',
+            plugins: {
+                legend: {
+                    position: 'bottom',
+                    labels: { boxWidth: 12, padding: 20, usePointStyle: true }
+                },
+                tooltip: {
+                    callbacks: {
+                        label: function(context) {
+                            let label = context.label || '';
+                            if (label) label += ': ';
+                            label += new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(context.raw);
+                            return label;
+                        }
+                    }
+                }
+            }
+        }
+    });
 </script>
+
+<style>
+    /* Layout Geral */
+    .dashboard-container {
+        display: flex;
+        flex-direction: column;
+        gap: 25px;
+        max-width: 1200px; /* Limite de largura para não esticar demais em telas gigantes */
+        margin: 0 auto;
+    }
+
+    .header-dashboard {
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-end;
+        margin-bottom: 10px;
+    }
+    
+    .header-dashboard h1 {
+        font-size: 1.8rem;
+        color: #2c3e50;
+        margin: 0;
+    }
+    
+    .subtitle {
+        color: #7f8c8d;
+        margin: 5px 0 0 0;
+        font-size: 0.95rem;
+    }
+
+    .date-badge {
+        background: #fff;
+        padding: 8px 15px;
+        border-radius: 20px;
+        box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+        color: #7f8c8d;
+        font-size: 0.9rem;
+        font-weight: 500;
+    }
+
+    /* Grid de Estatísticas */
+    .stats-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+        gap: 20px;
+    }
+
+    .stat-card {
+        background: white;
+        border-radius: 12px;
+        padding: 20px;
+        display: flex;
+        align-items: center;
+        gap: 20px;
+        box-shadow: 0 4px 15px rgba(0,0,0,0.03);
+        transition: transform 0.2s ease;
+        border: 1px solid rgba(0,0,0,0.02);
+    }
+
+    .stat-card:hover { transform: translateY(-5px); }
+
+    .stat-icon {
+        width: 60px;
+        height: 60px;
+        border-radius: 12px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 1.5rem;
+        flex-shrink: 0;
+    }
+
+    .icon-blue { background-color: #e3f2fd; color: #1976d2; }
+    .icon-green { background-color: #e8f5e9; color: #2e7d32; }
+    .icon-orange { background-color: #fff3e0; color: #ef6c00; }
+    .icon-purple { background-color: #f3e5f5; color: #7b1fa2; }
+
+    .stat-info h3 { margin: 0; font-size: 0.85rem; color: #95a5a6; text-transform: uppercase; letter-spacing: 0.5px; font-weight: 600; }
+    .stat-info .valor { font-size: 1.5rem; font-weight: 700; color: #2c3e50; margin: 5px 0; }
+    .stat-desc { font-size: 0.8rem; color: #bdc3c7; }
+
+    /* --- Container dos Gráficos (MODIFICADO) --- */
+    .charts-container {
+        display: flex;
+        flex-direction: column; /* Empilha um abaixo do outro */
+        gap: 30px; /* Espaço entre os gráficos */
+    }
+
+    .chart-card {
+        background: white;
+        border-radius: 12px;
+        padding: 25px;
+        box-shadow: 0 4px 15px rgba(0,0,0,0.03);
+        width: 100%; /* Ocupa largura total */
+    }
+
+    .chart-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 25px;
+        border-bottom: 1px solid #f0f0f0;
+        padding-bottom: 15px;
+    }
+
+    .chart-header h3 {
+        margin: 0;
+        font-size: 1.1rem;
+        color: #34495e;
+        display: flex;
+        align-items: center;
+        gap: 10px;
+    }
+    
+    .chart-header span {
+        font-size: 0.8rem;
+        color: #95a5a6;
+        background: #f8f9fa;
+        padding: 4px 10px;
+        border-radius: 15px;
+    }
+
+    .chart-body {
+        position: relative;
+        height: 400px; /* Altura padrão aumentada para preencher bem a tela */
+        width: 100%;
+    }
+</style>
 {% endblock %}

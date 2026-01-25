@@ -8,6 +8,7 @@ from app_controle.views import (
     estoque_views,
     vendas_views,
     novavenda_views,
+    orcamento_views,
     home_views,
     logout_views,
     auth_views,
@@ -40,10 +41,19 @@ urlpatterns = [
     path('vendas/criar/', novavenda_views.criar_venda, name='criar_venda'),
     path('vendas/pdf/<int:venda_id>/', novavenda_views.gerar_pdf_venda, name='gerar_pdf_venda'),
     
+    # === ORÇAMENTOS ===
+    path('orcamentos/', orcamento_views.listar_orcamentos, name='orcamentos'),
+    path('orcamentos/novo/', orcamento_views.novo_orcamento, name='novo_orcamento'),
+    path('orcamentos/criar/', orcamento_views.criar_orcamento, name='criar_orcamento'),
+    path('orcamentos/pdf/<int:orcamento_id>/', orcamento_views.gerar_pdf_orcamento, name='gerar_pdf_orcamento'),
+    path('orcamentos/deletar/<int:orcamento_id>/', orcamento_views.deletar_orcamento, name='deletar_orcamento'),
     # === APIs ===
     path('api/clientes/', novavenda_views.buscar_clientes, name='buscar_clientes'),
     path('api/produtos/', novavenda_views.buscar_produtos, name='buscar_produtos'),
     path('api/formas-pagamento/', novavenda_views.buscar_formas_pagamento, name='buscar_formas_pagamento'),
+    path('api/orcamento/clientes/', orcamento_views.buscar_clientes, name='buscar_clientes_orcamento'),
+    path('api/orcamento/produtos/', orcamento_views.buscar_produtos, name='buscar_produtos_orcamento'),
+    path('api/orcamento/formas-pagamento/', orcamento_views.buscar_formas_pagamento, name='buscar_formas_pagamento_orcamento'),
     
     # === CLIENTES ===
     path('clientes/', cliente_views.listar_clientes, name='clientes'),

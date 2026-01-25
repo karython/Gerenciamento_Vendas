@@ -1,0 +1,385 @@
+{% extends 'core/base.html' %}
+{% load static %}
+
+{% block title %}Orçamentos{% endblock %}
+
+{% block dashboard_content %}
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+
+<div class="header-vendas"> 
+    <h1>Orçamentos</h1>
+    <div class="header-right">
+        <form method="GET" class="filtro-form">
+            <div class="filtro-group">
+                <label>Buscar Cliente:</label>
+                <input type="text" name="busca_nome" class="input-busca" value="{{ busca_nome|default:'' }}" placeholder="Nome do cliente">
+            </div>
+
+            <div class="filtro-group">
+                <label>De:</label>
+                <input type="date" name="data_inicio" class="input-data" value="{{ data_inicio|default:'' }}">
+            </div>
+
+            <div class="filtro-group">
+                <label>Até:</label>
+                <input type="date" name="data_fim" class="input-data" value="{{ data_fim|default:'' }}">
+            </div>
+
+            <div class="filtro-group">
+                <label>Status:</label>
+                <select name="status" class="input-data" style="min-width: 120px;">
+                    <option value="todos" {% if status_filtro == 'todos' %}selected{% endif %}>Todos</option>
+                    <option value="PENDENTE" {% if status_filtro == 'PENDENTE' %}selected{% endif %}>Pendente</option>
+                    <option value="APROVADO" {% if status_filtro == 'APROVADO' %}selected{% endif %}>Aprovado</option>
+                    <option value="REJEITADO" {% if status_filtro == 'REJEITADO' %}selected{% endif %}>Rejeitado</option>
+                    <option value="CONVERTIDO" {% if status_filtro == 'CONVERTIDO' %}selected{% endif %}>Convertido</option>
+                </select>
+            </div>
+
+            <button type="submit" class="btn-filtrar">🔍 Filtrar</button>
+            <a href="{% url 'orcamentos' %}" class="btn-limpar" style="text-decoration: none; display: inline-block; text-align: center;">✖ Limpar</a>
+        </form>
+    </div>
+</div>
+
+<div id="barra-selecao" class="barra-selecao" style="display: none;">
+    <div class="selecao-info">
+        <span id="contador-selecionados">0</span> orçamento(s) selecionado(s)
+    </div>
+    <div class="selecao-acoes">
+        <button class="btn-deletar-multiplas" onclick="deletarSelecionados()">
+            🗑️ Deletar Selecionados
+        </button>
+        <button class="btn-cancelar" onclick="cancelarSelecao()">
+            Cancelar
+        </button>
+    </div>
+</div>
+
+<div class="card-vendas">
+    {% if orcamentos %}
+        <table class="tabela-vendas">
+            <thead>
+                <tr>
+                    <th style="width: 40px;">
+                        <input type="checkbox" id="selecionar-todos" onchange="selecionarTodos(this)">
+                    </th>
+                    <th>Nº</th> <th>Cliente</th>
+                    <th>Data</th>
+                    <th>Qtd. Itens</th>
+                    <th>Valor Total</th>
+                    <th>Status</th>
+                    <th style="text-align: center;">Ações</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for orcamento in orcamentos %}
+                <tr>
+                    <td>
+                        <input type="checkbox" class="checkbox-orcamento" value="{{ orcamento.idORCAMENTO }}" onchange="atualizarSelecao()">
+                    </td>
+                    
+                    <td><strong>OR-{{ orcamento.idORCAMENTO|stringformat:"05d" }}</strong></td>
+
+                    <td>{{ orcamento.CLIENTE_idCLIENTE.NOME_CLIENTE }}</td>
+                    <td>{{ orcamento.DT_ORCAMENTO|date:"d/m/Y" }}</td>
+                    <td>{{ orcamento.itens.count }}</td> 
+                    <td>R$ {{ orcamento.VLR_TOTAL|floatformat:2 }}</td>
+                    <td>
+                        {% if orcamento.STATUS == 'PENDENTE' %}
+                            <span class="badge badge-warning">Pendente</span>
+                        {% elif orcamento.STATUS == 'APROVADO' %}
+                            <span class="badge badge-success">Aprovado</span>
+                        {% elif orcamento.STATUS == 'REJEITADO' %}
+                            <span class="badge badge-danger">Rejeitado</span>
+                        {% elif orcamento.STATUS == 'CONVERTIDO' %}
+                            <span class="badge badge-info">Convertido</span>
+                        {% endif %}
+                    </td>
+                    
+                    <td style="text-align: center;">
+                        <a href="#" 
+                           class="btn-acao btn-detalhes" 
+                           onclick="verDetalhes({{ orcamento.idORCAMENTO }}); return false;"
+                           title="Ver Detalhes">
+                            <i class="fas fa-eye"></i>
+                        </a>
+                        
+                        <a href="{% url 'gerar_pdf_orcamento' orcamento.idORCAMENTO %}" 
+                           class="btn-acao btn-pdf" 
+                           target="_blank"
+                           title="Baixar PDF">
+                            <i class="fas fa-file-pdf"></i>
+                        </a>
+                        
+                        <a href="#" 
+                           class="btn-acao btn-deletar" 
+                           onclick="deletarOrcamento({{ orcamento.idORCAMENTO }}); return false;"
+                           title="Deletar Orçamento">
+                            <i class="fas fa-trash-alt"></i>
+                        </a>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    {% else %}
+        <p style="text-align: center; padding: 20px;"> Nenhum orçamento encontrado</p>
+    {% endif %}
+</div>
+
+<div id="modal-detalhes" class="modal-overlay" style="display: none;">
+    <div class="modal-box">
+        <div class="modal-header">
+            <h2>Detalhes do Orçamento</h2>
+            <button class="btn-fechar" onclick="fecharModal()">&times;</button>
+        </div>
+        <div id="modal-content" class="modal-body">
+            <p>Carregando...</p>
+        </div>
+    </div>
+</div>
+
+<script id="orcamentos-data" type="application/json">
+[
+    {% for orcamento in orcamentos %}
+    {
+        "id": {{ orcamento.idORCAMENTO }},
+        "idFormatado": "OR-{{ orcamento.idORCAMENTO|stringformat:"05d" }}",
+        "data": "{{ orcamento.DT_ORCAMENTO|date:"d/m/Y H:i" }}",
+        "cliente": "{{ orcamento.CLIENTE_idCLIENTE.NOME_CLIENTE|escapejs }}",
+        "telefone": "{{ orcamento.CLIENTE_idCLIENTE.TELEFONE|escapejs }}",
+        "total": "{{ orcamento.VLR_TOTAL|floatformat:2 }}",
+        "status": "{{ orcamento.STATUS }}",
+        "formaPagamento": "{{ orcamento.PAGAMENTO_idPAGAMENTO.TP_PAGAMENTO|escapejs }}",
+        "urlPdf": "{% url 'gerar_pdf_orcamento' orcamento.idORCAMENTO %}",
+        "itens": [
+            {% for item in orcamento.itens.all %}
+            {
+                "produto": "{{ item.PRODUTO_idPRODUTO.NOME_PRODUTO|default:item.PRODUTO_idPRODUTO|escapejs }}",
+                "qtd": "{{ item.QUANTIDADE|floatformat:0 }}",
+                "unitario": "{{ item.VLR_UNITARIO|floatformat:2 }}",
+                "total": "{{ item.VLR_TOTAL|floatformat:2 }}"
+            }{% if not forloop.last %},{% endif %}
+            {% endfor %}
+        ]
+    }{% if not forloop.last %},{% endif %}
+    {% endfor %}
+]
+</script>
+
+<script>
+// Carregar dados
+const orcamentosData = JSON.parse(document.getElementById('orcamentos-data').textContent);
+
+// ========== MODAL DETALHES ==========
+function verDetalhes(id) {
+    const orcamento = orcamentosData.find(o => o.id === id);
+    
+    if (!orcamento) return;
+
+    // Construir tabela de itens dinamicamente
+    let itensHtml = `
+        <table style="width: 100%; border-collapse: collapse; margin-top: 10px; font-size: 14px;">
+            <thead style="background: #f8f9fa;">
+                <tr>
+                    <th style="padding: 8px; border-bottom: 2px solid #ddd; text-align: left;">Produto</th>
+                    <th style="padding: 8px; border-bottom: 2px solid #ddd; text-align: center;">Qtd</th>
+                    <th style="padding: 8px; border-bottom: 2px solid #ddd; text-align: right;">Total</th>
+                </tr>
+            </thead>
+            <tbody>
+    `;
+
+    orcamento.itens.forEach(item => {
+        itensHtml += `
+            <tr>
+                <td style="padding: 8px; border-bottom: 1px solid #eee;">${item.produto}</td>
+                <td style="padding: 8px; border-bottom: 1px solid #eee; text-align: center;">${item.qtd}</td>
+                <td style="padding: 8px; border-bottom: 1px solid #eee; text-align: right;">R$ ${item.total}</td>
+            </tr>
+        `;
+    });
+
+    itensHtml += `</tbody></table>`;
+
+    const html = `
+        <div class="detalhes-venda">
+            <div style="display: flex; justify-content: space-between;">
+                <div>
+                    <p><strong>Nº:</strong> ${orcamento.idFormatado}</p>
+                    <p><strong>Cliente:</strong> ${orcamento.cliente}</p>
+                    <p><strong>Telefone:</strong> ${orcamento.telefone}</p>
+                </div>
+                <div style="text-align: right;">
+                    <p><strong>Data:</strong> ${orcamento.data}</p>
+                    <p><strong>Status:</strong> ${orcamento.status}</p>
+                </div>
+            </div>
+            
+            <hr>
+            <h4>Itens do Orçamento:</h4>
+            ${itensHtml}
+            
+            <hr>
+            <p class="text-right" style="font-size: 1.2em; text-align: right;"><strong>Total: R$ ${orcamento.total}</strong></p>
+            <p style="font-size: 0.9em;"><strong>Forma Pagamento:</strong> ${orcamento.formaPagamento}</p>
+            
+            <div style="text-align: center; margin-top: 20px;">
+                <a href="${orcamento.urlPdf}" class="btn-download" target="_blank">
+                    <i class="fas fa-file-pdf"></i> Baixar PDF
+                </a>
+            </div>
+        </div>
+    `;
+    
+    document.getElementById('modal-content').innerHTML = html;
+    document.getElementById('modal-detalhes').style.display = 'flex';
+}
+
+function fecharModal() {
+    document.getElementById('modal-detalhes').style.display = 'none';
+}
+
+// Fechar ao clicar fora
+document.getElementById('modal-detalhes').addEventListener('click', function(e) {
+    if (e.target === this) fecharModal();
+});
+
+// ========== AÇÕES (DELETAR / SELEÇÃO) ==========
+
+function deletarOrcamento(id) {
+    if (!confirm('Tem certeza que deseja deletar este orçamento?')) return false;
+
+    fetch(`/orcamentos/deletar/${id}/`, {
+        method: 'POST',
+        headers: { 'X-CSRFToken': getCookie('csrftoken') }
+    })
+    .then(r => r.json())
+    .then(data => {
+        if (data.success) {
+            alert(data.message);
+            location.reload();
+        } else {
+            alert('Erro: ' + data.message);
+        }
+    });
+}
+
+// Seleção Multipla
+function selecionarTodos(checkbox) {
+    document.querySelectorAll('.checkbox-orcamento').forEach(cb => cb.checked = checkbox.checked);
+    atualizarSelecao();
+}
+
+function atualizarSelecao() {
+    const qtd = document.querySelectorAll('.checkbox-orcamento:checked').length;
+    document.getElementById('contador-selecionados').textContent = qtd;
+    document.getElementById('barra-selecao').style.display = qtd > 0 ? 'flex' : 'none';
+}
+
+function cancelarSelecao() {
+    document.querySelectorAll('.checkbox-orcamento').forEach(cb => cb.checked = false);
+    document.getElementById('selecionar-todos').checked = false;
+    atualizarSelecao();
+}
+
+async function deletarSelecionados() {
+    const ids = Array.from(document.querySelectorAll('.checkbox-orcamento:checked')).map(cb => cb.value);
+    
+    if (ids.length === 0) return;
+    if (!confirm(`⚠️ Tem certeza que deseja deletar ${ids.length} orçamentos?`)) return;
+
+    // Deleta sequencialmente para evitar travar o banco
+    for (const id of ids) {
+        await fetch(`/orcamentos/deletar/${id}/`, {
+            method: 'POST',
+            headers: { 'X-CSRFToken': getCookie('csrftoken') }
+        });
+    }
+    location.reload();
+}
+
+function getCookie(name) {
+    let cookieValue = null;
+    if (document.cookie && document.cookie !== '') {
+        const cookies = document.cookie.split(';');
+        for (let i = 0; i < cookies.length; i++) {
+            const cookie = cookies[i].trim();
+            if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                break;
+            }
+        }
+    }
+    return cookieValue;
+}
+</script>
+
+<style>
+/* Estilos para os Botões de Ação (Ícones) */
+.btn-acao {
+    border: none;
+    background: none;
+    cursor: pointer;
+    font-size: 1.1rem;
+    margin: 0 6px;
+    transition: transform 0.2s, color 0.2s;
+    display: inline-block;
+}
+.btn-acao:hover {
+    transform: scale(1.15);
+}
+
+.btn-detalhes { color: #007bff; }       /* Azul */
+.btn-detalhes:hover { color: #0056b3; }
+
+.btn-pdf { color: #6c757d; }            /* Cinza Escuro */
+.btn-pdf:hover { color: #495057; }
+
+.btn-deletar { color: #dc3545; }        /* Vermelho */
+.btn-deletar:hover { color: #a71d2a; }
+
+/* --- Estilos Gerais --- */
+.header-vendas { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; flex-wrap: wrap; gap: 15px; }
+.header-vendas h1 { font-size: 24px; color: #333; margin: 0; }
+.header-right, .filtro-form { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.filtro-group { display: flex; flex-direction: column; gap: 5px; }
+.filtro-group label { font-size: 12px; color: #666; font-weight: 500; }
+.input-data, .input-busca { padding: 8px 12px; border: 1px solid #ccc; border-radius: 4px; font-size: 14px; }
+.input-busca { min-width: 200px; }
+
+.btn-filtrar, .btn-limpar, .btn-download { padding: 8px 16px; border-radius: 4px; border: none; cursor: pointer; color: white; font-weight: 500; font-size: 14px; }
+.btn-filtrar, .btn-download { background: #007bff; margin-top: 22px; }
+.btn-limpar { background: #6c757d; margin-top: 22px; }
+.btn-download:hover { background: #0056b3; text-decoration: none; }
+
+.card-vendas { background: white; border-radius: 8px; padding: 20px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
+.tabela-vendas { width: 100%; border-collapse: collapse; }
+.tabela-vendas thead th { background: #f8f9fa; padding: 12px; text-align: left; font-weight: 600; border-bottom: 2px solid #dee2e6; color: #495057; }
+.tabela-vendas tbody td { padding: 12px; border-bottom: 1px solid #dee2e6; vertical-align: middle; }
+.tabela-vendas tbody tr:hover { background: #f8f9fa; }
+
+/* Badges de Status */
+.badge { padding: 5px 10px; border-radius: 4px; font-size: 0.9em; }
+.badge-warning { background: #fff3cd; color: #856404; }
+.badge-success { background: #d4edda; color: #155724; }
+.badge-danger { background: #f8d7da; color: #721c24; }
+.badge-info { background: #d1ecf1; color: #0c5460; }
+
+/* Modal */
+.modal-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0, 0, 0, 0.5); display: flex; justify-content: center; align-items: center; z-index: 1000; }
+.modal-box { background: white; border-radius: 8px; width: 90%; max-width: 600px; max-height: 80vh; overflow-y: auto; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1); }
+.modal-header { display: flex; justify-content: space-between; align-items: center; padding: 20px; border-bottom: 1px solid #dee2e6; }
+.btn-fechar { background: none; border: none; font-size: 28px; color: #999; cursor: pointer; }
+.modal-body { padding: 20px; }
+.detalhes-venda p { margin: 5px 0; }
+.detalhes-venda hr { margin: 15px 0; border: 0; border-top: 1px solid #eee; }
+
+/* Barra Seleção */
+.barra-selecao { background: #fff3cd; border: 1px solid #ffc107; border-radius: 6px; padding: 12px 16px; margin-bottom: 15px; display: flex; justify-content: space-between; align-items: center; }
+.selecao-acoes { display: flex; gap: 10px; }
+.btn-deletar-multiplas { background: #dc3545; color: white; border: none; padding: 8px 16px; border-radius: 4px; cursor: pointer; }
+.btn-cancelar { background: #6c757d; color: white; border: none; padding: 8px 16px; border-radius: 4px; cursor: pointer; }
+</style>
+{% endblock %}

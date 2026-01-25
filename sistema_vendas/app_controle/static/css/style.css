@@ -284,6 +284,8 @@ body {
     display: flex;
     justify-content: space-between;
     align-items: center;
+    background-color: var(--color-green-dark);
+    color: var(--cor-branco);
 }
 .accordion summary::after { /* Seta customizada */
     content: '+';

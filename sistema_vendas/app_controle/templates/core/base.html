@@ -5,6 +5,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{% block title %}Sistema de Vendas{% endblock %}</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link rel="stylesheet" href="{% static 'css/style.css' %}">
     <link rel="icon" type="image/png" href="{% static 'img/logo.png' %}">
     <script src="{% static 'js/loader.js' %}"></script>
@@ -20,10 +21,13 @@
         
         <ul class="menu">
             <li><a href="{% url 'dashboard' %}" class="{% if request.path == '/dashboard/' %}active{% endif %}">Dashboard</a></li>
-            <li><a href="{% url 'estoque' %}" class="{% if request.path == '/estoque/' %}active{% endif %}">Estoque</a></li>
+            
             <li><a href="{% url 'nova_venda' %}" class="{% if request.path == '/nova-venda/' %}active{% endif %}">Nova Venda</a></li>
+            <li><a href="{% url 'novo_orcamento' %}" class="{% if request.path == '/orcamentos/novo/' %}active{% endif %}">Novo Orçamento</a></li>
+            <li><a href="{% url 'orcamentos' %}" class="{% if request.path == '/orcamentos' %}active{% endif %}">Orçamentos</a></li>
             <li><a href="{% url 'vendas' %}" class="{% if request.path == '/vendas/' %}active{% endif %}">Vendas</a></li>
             <li><a href="{% url 'clientes' %}" class="{% if request.path == '/clientes/' %}active{% endif %}">Clientes</a></li>
+            <li><a href="{% url 'estoque' %}" class="{% if request.path == '/estoque/' %}active{% endif %}">Estoque</a></li>
         </ul>
         
         <div class="loja-info">

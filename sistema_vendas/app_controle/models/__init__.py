@@ -8,7 +8,9 @@ from .produto import Produto
 from .estoque import Estoque
 from .pagamento import Pagamento
 from .venda import Venda
-from .item_venda import ItemVenda  # ← ADICIONAR
+from .orcamento import Orcamento
+from .item_venda import ItemVenda
+from .item_orcamento import ItemOrcamento  # ← ADICIONAR ESTE IMPORT
 from .estoque_venda import EstoqueVenda
 from .usuario import Usuario
 from .loja import Loja
@@ -23,7 +25,9 @@ __all__ = [
     'Estoque',
     'Pagamento',
     'Venda',
-    'ItemVenda',  # ← ADICIONAR
+    'Orcamento',
+    'ItemVenda',
+    'ItemOrcamento',  # ← JÁ ESTÁ AQUI, MAS FALTAVA O IMPORT ACIMA
     'EstoqueVenda',
     'Usuario',
     'Loja',

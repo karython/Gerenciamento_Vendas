@@ -24,6 +24,13 @@ from .novavenda_views import (
     criar_venda,
     gerar_pdf_venda
 )
+from .orcamento_views import (
+    novo_orcamento,
+    criar_orcamento,
+    buscar_clientes as buscar_clientes_orcamento,
+    buscar_produtos as buscar_produtos_orcamento,
+    buscar_formas_pagamento as buscar_formas_pagamento_orcamento
+)
 
 __all__ = [
     # Auth
@@ -38,4 +45,7 @@ __all__ = [
     # Vendas
     'vendas', 'nova_venda', 'buscar_clientes', 'buscar_produtos',
     'buscar_formas_pagamento', 'criar_venda', 'gerar_pdf_venda',
+    # Orçamentos
+    'novo_orcamento', 'criar_orcamento', 'buscar_clientes_orcamento',
+    'buscar_produtos_orcamento', 'buscar_formas_pagamento_orcamento',
 ]

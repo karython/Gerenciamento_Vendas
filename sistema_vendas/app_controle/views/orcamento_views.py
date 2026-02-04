@@ -480,10 +480,9 @@ def converter_orcamento_venda(request, orcamento_id):
                 ItemVenda.objects.create(
                     VENDA_idVENDA=venda,
                     PRODUTO_idPRODUTO=item_orc.PRODUTO_idPRODUTO,
-                    QTD_ITEM=item_orc.QTD_ITEM,
-                    VALOR_UNITARIO=item_orc.VALOR_UNITARIO,
-                    DESCONTO_ITEM=item_orc.DESCONTO_ITEM,
-                    VLR_TOTAL_ITEM=item_orc.VLR_TOTAL_ITEM
+                    QUANTIDADE=int(item_orc.QUANTIDADE),  # Converter Decimal para Int
+                    VLR_UNITARIO=item_orc.VLR_UNITARIO,
+                    VLR_TOTAL=item_orc.VLR_TOTAL
                 )
             
             # Atualizar status do orçamento

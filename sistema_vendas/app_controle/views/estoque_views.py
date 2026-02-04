@@ -64,28 +64,28 @@ def buscar_produto_ajax(request, produto_id):
     """Busca dados de um produto para edição - AJAX OTIMIZADO"""
     if request.method != 'GET':
         return JsonResponse({'success': False, 'message': 'Método inválido'}, status=400)
-    
     try:
-        produto = get_object_or_404(Produto.objects.only('idPRODUTO', 'DESCRICAO', 'IOF', 'VLR_UNIT'), idPRODUTO=produto_id)
-        estoque = Estoque.objects.filter(PRODUTO_idPRODUTO=produto).only('QTD_DISPONIVEL').first()
-        
-        if not estoque:
+        # Usar o service para garantir retorno consistente (inclui flag is_service)
+        resultado = EstoqueService.buscar_produto(produto_id)
+
+        if not resultado.get('estoque'):
             return JsonResponse({
-                'success': False, 
+                'success': False,
                 'message': 'Produto sem estoque cadastrado'
             }, status=404)
-        
+
         return JsonResponse({
             'success': True,
             'produto': {
-                'id': produto.idPRODUTO,
-                'nome': produto.DESCRICAO,
-                'preco_custo': float(produto.IOF) if produto.IOF and produto.IOF != '0' else 0.0,
-                'preco_venda': float(produto.VLR_UNIT) if produto.VLR_UNIT else 0.0,
-                'quantidade': estoque.QTD_DISPONIVEL
+                'id': resultado['produto'].idPRODUTO,
+                'nome': resultado['nome'],
+                'preco_custo': resultado['preco_custo'],
+                'preco_venda': resultado['preco_venda'],
+                'quantidade': resultado['quantidade'],
+                'is_service': resultado.get('is_service', False)
             }
         })
-        
+
     except Produto.DoesNotExist:
         return JsonResponse({
             'success': False,

@@ -27,22 +27,41 @@ class VendaService:
         """Retorna lista de produtos com estoque disponível"""
         print("[VENDA SERVICE] Buscando produtos do estoque...")
         
-        estoques = Estoque.objects.select_related('PRODUTO_idPRODUTO').filter(QTD_DISPONIVEL__gt=0)
-        
         resultado = []
+
+        # Produtos com estoque físico
+        estoques = Estoque.objects.select_related('PRODUTO_idPRODUTO').filter(QTD_DISPONIVEL__gt=0)
+        produtos_incluidos = set()
         for estoque in estoques:
             produto = estoque.PRODUTO_idPRODUTO
             qtd_disponivel = estoque.QTD_DISPONIVEL
-            
+            produtos_incluidos.add(produto.idPRODUTO)
+
             resultado.append({
                 'id': produto.idPRODUTO,
                 'descricao': produto.DESCRICAO,
                 'valor': float(produto.VLR_UNIT) if produto.VLR_UNIT else 0.0,
                 'estoque': qtd_disponivel,
+                'is_service': False,
                 'label': f"#{produto.idPRODUTO} - {produto.DESCRICAO} - R$ {produto.VLR_UNIT} (Estoque: {qtd_disponivel})"
             })
-        
-        print(f"[VENDA SERVICE] Encontrados {len(resultado)} produtos com estoque")
+
+        # Produtos marcados como serviço (sem controle de estoque)
+        servicos = Produto.objects.filter(TRACK_STOCK=False)
+        for produto in servicos:
+            if produto.idPRODUTO in produtos_incluidos:
+                continue
+            resultado.append({
+                'id': produto.idPRODUTO,
+                'descricao': produto.DESCRICAO,
+                'valor': float(produto.VLR_UNIT) if produto.VLR_UNIT else 0.0,
+                # For services we expose is_service=True; frontend will allow any quantity
+                'estoque': 1,
+                'is_service': True,
+                'label': f"#{produto.idPRODUTO} - {produto.DESCRICAO} - R$ {produto.VLR_UNIT} (Serviço)"
+            })
+
+        print(f"[VENDA SERVICE] Encontrados {len(resultado)} produtos/serviços")
         return resultado
     
     @staticmethod
@@ -101,6 +120,8 @@ class VendaService:
         
         print(f"[VENDA SERVICE] Subtotal: R$ {subtotal}, Desconto: R$ {desconto}, Total: R$ {total}")
         
+        parcelamento = dados.get('parcelamento', '')
+        
         venda = Venda.objects.create(
             CLIENTE_idCLIENTE=cliente,
             PAGAMENTO_idPAGAMENTO=pagamento,
@@ -109,6 +130,7 @@ class VendaService:
             DESCONTO=desconto,
             VLR_FRETE=frete,
             OBSERVACAO=observacao,
+            PARCELAMENTO=parcelamento,
             VLR_TOTAL=total
         )
         
@@ -125,17 +147,21 @@ class VendaService:
             except Produto.DoesNotExist:
                 raise ValueError(f"Produto ID {produto_id} não encontrado")
             
-            estoque = Estoque.objects.filter(PRODUTO_idPRODUTO=produto).first()
-            
-            if not estoque:
-                raise ValueError(f"Produto {produto.DESCRICAO} não possui estoque cadastrado")
-            
-            if estoque.QTD_DISPONIVEL < quantidade:
-                raise ValueError(f"Estoque insuficiente para {produto.DESCRICAO}. Disponível: {estoque.QTD_DISPONIVEL}, Solicitado: {quantidade}")
-            
-            estoque_anterior = estoque.QTD_DISPONIVEL
-            estoque.QTD_DISPONIVEL -= quantidade
-            estoque.save()
+            # Se o produto é controlado por estoque, validar e debitar
+            if getattr(produto, 'TRACK_STOCK', True):
+                estoque = Estoque.objects.filter(PRODUTO_idPRODUTO=produto).first()
+                if not estoque:
+                    raise ValueError(f"Produto {produto.DESCRICAO} não possui estoque cadastrado")
+                if estoque.QTD_DISPONIVEL < quantidade:
+                    raise ValueError(f"Estoque insuficiente para {produto.DESCRICAO}. Disponível: {estoque.QTD_DISPONIVEL}, Solicitado: {quantidade}")
+
+                estoque_anterior = estoque.QTD_DISPONIVEL
+                estoque.QTD_DISPONIVEL -= quantidade
+                estoque.save()
+            else:
+                # Serviços: não alterar estoque físico
+                estoque = None
+                estoque_anterior = None
             
             # Criar ItemVenda
             valor_unitario = Decimal(str(item_dados.get('valor_unitario', 0)))
@@ -149,8 +175,11 @@ class VendaService:
                 VLR_TOTAL=valor_total
             )
 
-            print(f"[VENDA SERVICE] ✅ Estoque atualizado para {produto.DESCRICAO}:")
-            print(f"[VENDA SERVICE]    Anterior: {estoque_anterior} -> Atual: {estoque.QTD_DISPONIVEL}")
+            if estoque is not None:
+                print(f"[VENDA SERVICE] ✅ Estoque atualizado para {produto.DESCRICAO}:")
+                print(f"[VENDA SERVICE]    Anterior: {estoque_anterior} -> Atual: {estoque.QTD_DISPONIVEL}")
+            else:
+                print(f"[VENDA SERVICE] ℹ️ Produto '{produto.DESCRICAO}' é um serviço; estoque não alterado")
             print(f"[VENDA SERVICE] ✅ ItemVenda criado para {produto.DESCRICAO}")
         
         print(f"[VENDA SERVICE] ✅ Venda #{venda.idVENDA} finalizada com sucesso!")

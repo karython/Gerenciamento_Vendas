@@ -39,11 +39,14 @@ class EstoqueService:
         print(f"[ESTOQUE SERVICE] Cadastrando produto: {dados}")
         
         # Criar produto - IOF guarda preço de custo, VLR_UNIT guarda preço de venda
+        # Se for marcado como serviço, não rastreamos estoque (TRACK_STOCK=False)
+        is_service = bool(dados.get('is_service', False))
         produto = Produto.objects.create(
             DESCRICAO=dados['nome'],
             VLR_UNIT=str(dados['preco_venda']),
             IOF=str(dados.get('preco_custo', 0)),
-            DT_MOVIMENTADA=dados.get('data_movimentacao')
+            DT_MOVIMENTADA=dados.get('data_movimentacao'),
+            TRACK_STOCK=(not is_service)
         )
         
         # Criar estoque
@@ -97,6 +100,9 @@ class EstoqueService:
         produto.DESCRICAO = dados.get('nome', produto.DESCRICAO)
         produto.VLR_UNIT = str(dados.get('preco_venda', produto.VLR_UNIT))
         produto.IOF = str(dados.get('preco_custo', produto.IOF))
+        # Atualizar flag de serviço/controle de estoque se informado
+        if 'is_service' in dados:
+            produto.TRACK_STOCK = (not bool(dados.get('is_service')))
         produto.save()
         
         print(f"[ESTOQUE SERVICE] Produto atualizado: {produto.DESCRICAO}")
@@ -124,7 +130,8 @@ class EstoqueService:
                 'nome': produto.DESCRICAO,
                 'preco_custo': float(produto.IOF) if produto.IOF else 0.0,
                 'preco_venda': float(produto.VLR_UNIT) if produto.VLR_UNIT else 0.0,
-                'quantidade': estoque.QTD_DISPONIVEL if estoque else 0
+                'quantidade': estoque.QTD_DISPONIVEL if estoque else 0,
+                'is_service': not bool(produto.TRACK_STOCK)
             }
         except Produto.DoesNotExist:
             raise ValueError("Produto não encontrado")

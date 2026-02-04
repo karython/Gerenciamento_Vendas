@@ -46,6 +46,9 @@ urlpatterns = [
     path('orcamentos/novo/', orcamento_views.novo_orcamento, name='novo_orcamento'),
     path('orcamentos/criar/', orcamento_views.criar_orcamento, name='criar_orcamento'),
     path('orcamentos/deletar/<int:orcamento_id>/', vendas_views.deletar_orcamento, name='deletar_orcamento'),
+    path('orcamentos/status/<int:orcamento_id>/', orcamento_views.atualizar_status_orcamento, name='atualizar_status_orcamento'),
+    path('orcamentos/converter/<int:orcamento_id>/', orcamento_views.converter_orcamento_venda, name='converter_orcamento_venda'),
+    path('orcamentos/pdf/<int:orcamento_id>/', orcamento_views.gerar_pdf_orcamento, name='gerar_pdf_orcamento'),
     
     # === APIs ===
     path('api/clientes/', novavenda_views.buscar_clientes, name='buscar_clientes'),

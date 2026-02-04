@@ -26,6 +26,7 @@ class Orcamento(models.Model):
     DESCONTO = models.DecimalField(max_digits=10, decimal_places=2, default=0.00)
     VLR_FRETE = models.DecimalField(max_digits=10, decimal_places=2, default=0.00)
     OBSERVACAO = models.TextField(max_length=3000, null=True, blank=True)
+    PARCELAMENTO = models.CharField(max_length=45, null=True, blank=True)
     VLR_TOTAL = models.DecimalField(max_digits=10, decimal_places=2)
     STATUS = models.CharField(
         max_length=20,

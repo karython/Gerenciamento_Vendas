@@ -64,6 +64,9 @@ class OrcamentoService:
             if vlr_frete < 0:
                 raise ValueError('O valor do frete não pode ser negativo')
             
+            # Pegar parcelamento se informado
+            parcelamento = dados.get('parcelamento', '')
+            
             # Criar orçamento
             orcamento = Orcamento.objects.create(
                 CLIENTE_idCLIENTE=cliente,
@@ -73,6 +76,7 @@ class OrcamentoService:
                 DESCONTO=desconto,
                 VLR_FRETE=vlr_frete,
                 OBSERVACAO=observacao,
+                PARCELAMENTO=parcelamento,
                 VLR_TOTAL=vlr_total,
                 STATUS='PENDENTE'
             )

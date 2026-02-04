@@ -214,7 +214,13 @@ def gerar_pdf_venda(request, venda_id):
         c.setFont("Helvetica-Bold", 18)
         c.drawCentredString(width / 2, y, "RECIBO DE VENDA")
         c.setFont("Helvetica", 10)
-        c.drawCentredString(width / 2, y - 15, f"Nº V-{venda.idVENDA:05d}")
+        
+        # Número da venda com informação de orçamento de origem
+        numero_venda = f"Nº V-{venda.idVENDA:05d}"
+        if venda.ORCAMENTO_ORIGEM:
+            numero_venda += f" | Orçamento: OR-{venda.ORCAMENTO_ORIGEM.idORCAMENTO:05d}"
+        
+        c.drawCentredString(width / 2, y - 15, numero_venda)
         
         # ==============================================================================
         # --- TABELA DE PRODUTOS (ESTILO IGUAL AO DE ORÇAMENTO) ---
@@ -288,6 +294,11 @@ def gerar_pdf_venda(request, venda_id):
         y -= 25
         c.setFont("Helvetica-Bold", 11)
         c.drawString(margem_esq + 10, y, f"Forma de Pagamento: {venda.PAGAMENTO_idPAGAMENTO.TP_PAGAMENTO}")
+        
+        # Parcelamento (se houver)
+        parcelamento = getattr(venda, 'PARCELAMENTO', '')
+        if parcelamento:
+            c.drawString(margem_dir - 200, y, f"Parcelamento: {parcelamento}")
         
         # Observação (se houver) - desenha logo abaixo das informações resumidas
         y -= 20

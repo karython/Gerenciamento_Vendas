@@ -4,6 +4,7 @@ from .cliente import Cliente
 from .pagamento import Pagamento
 from django.utils import timezone
 
+# Importação circular evitada com lazy reference
 class Venda(models.Model):
     idVENDA = models.AutoField(primary_key=True)
     CLIENTE_idCLIENTE = models.ForeignKey(
@@ -24,7 +25,16 @@ class Venda(models.Model):
     DESCONTO = models.DecimalField(max_digits=10, decimal_places=2, default=0.00)
     VLR_FRETE = models.DecimalField(max_digits=10, decimal_places=2, default=0.00)
     OBSERVACAO = models.TextField(max_length=3000, null=True, blank=True)
+    PARCELAMENTO = models.CharField(max_length=45, null=True, blank=True)
     VLR_TOTAL = models.DecimalField(max_digits=10, decimal_places=2)
+    ORCAMENTO_ORIGEM = models.ForeignKey(
+        'Orcamento',
+        on_delete=models.SET_NULL,
+        db_column='ORCAMENTO_idORCAMENTO',
+        related_name='vendas_convertidas',
+        null=True,
+        blank=True
+    )
 
     class Meta:
         db_table = 'VENDA'

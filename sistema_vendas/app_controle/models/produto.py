@@ -6,6 +6,7 @@ class Produto(models.Model):
     VLR_UNIT = models.CharField(max_length=45)
     IOF = models.CharField(max_length=45)
     DT_MOVIMENTADA = models.DateTimeField()
+    TRACK_STOCK = models.BooleanField(default=True)
 
     class Meta:
         db_table = 'PRODUTO'

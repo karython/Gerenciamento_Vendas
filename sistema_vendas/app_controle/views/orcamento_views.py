@@ -245,6 +245,17 @@ def gerar_pdf_orcamento(request, orcamento_id):
         c.setFont("Helvetica", 10)
         c.drawCentredString(width / 2, y - 15, f"Nº OR-{orcamento.idORCAMENTO:05d}")
         
+        # Adicionar status do orçamento
+        status_map = {
+            'PENDENTE': 'PENDENTE',
+            'APROVADO': 'APROVADO',
+            'REJEITADO': 'REJEITADO',
+            'CONVERTIDO': 'CONVERTIDO EM VENDA'
+        }
+        status_texto = status_map.get(orcamento.STATUS, orcamento.STATUS)
+        c.setFont("Helvetica", 9)
+        c.drawCentredString(width / 2, y - 28, f"Status: {status_texto}")
+        
         # ==============================================================================
         # --- TABELA DE PRODUTOS (ESTILO IGUAL AO DE VENDA) ---
         # ==============================================================================
@@ -319,6 +330,10 @@ def gerar_pdf_orcamento(request, orcamento_id):
         c.setFont("Helvetica-Bold", 11)
         c.drawString(margem_esq + 10, y, f"Forma de Pagamento: {orcamento.PAGAMENTO_idPAGAMENTO.TP_PAGAMENTO}")
         
+        # Parcelamento (se houver)
+        parcelamento = getattr(orcamento, 'PARCELAMENTO', '')
+        if parcelamento:
+            c.drawString(margem_dir - 200, y, f"Parcelamento: {parcelamento}")
 
         
         # Observação (se houver)
@@ -386,3 +401,113 @@ def gerar_pdf_orcamento(request, orcamento_id):
         import traceback
         traceback.print_exc()
         return HttpResponse(f'Erro ao gerar PDF: {str(e)}', status=500)
+
+
+@AuthService.requer_login
+def atualizar_status_orcamento(request, orcamento_id):
+    """Atualiza o status do orçamento (Aprovado, Rejeitado, Convertido)"""
+    if request.method == 'POST':
+        try:
+            dados = json.loads(request.body)
+            novo_status = dados.get('status', '').upper()
+            
+            orcamento = Orcamento.objects.get(idORCAMENTO=orcamento_id)
+            
+            status_validos = ['PENDENTE', 'APROVADO', 'REJEITADO', 'CONVERTIDO']
+            if novo_status not in status_validos:
+                return JsonResponse({
+                    'success': False,
+                    'message': f'Status inválido. Use: {", ".join(status_validos)}'
+                }, status=400)
+            
+            orcamento.STATUS = novo_status
+            orcamento.save()
+            
+            return JsonResponse({
+                'success': True,
+                'message': f'Status atualizado para {novo_status}',
+                'status': novo_status
+            })
+            
+        except Orcamento.DoesNotExist:
+            return JsonResponse({
+                'success': False,
+                'message': 'Orçamento não encontrado'
+            }, status=404)
+        except Exception as e:
+            return JsonResponse({
+                'success': False,
+                'message': str(e)
+            }, status=500)
+    
+    return JsonResponse({'success': False, 'message': 'Método não permitido'}, status=405)
+
+
+@AuthService.requer_login
+def converter_orcamento_venda(request, orcamento_id):
+    """Converte um orçamento em venda"""
+    if request.method == 'POST':
+        try:
+            from ..models import Venda, ItemVenda, ItemOrcamento
+            
+            orcamento = Orcamento.objects.get(idORCAMENTO=orcamento_id)
+            
+            # Verificar se o orçamento já foi convertido
+            if orcamento.STATUS == 'CONVERTIDO':
+                return JsonResponse({
+                    'success': False,
+                    'message': 'Este orçamento já foi convertido em venda'
+                }, status=400)
+            
+            # Criar a venda com os mesmos dados do orçamento
+            venda = Venda.objects.create(
+                CLIENTE_idCLIENTE=orcamento.CLIENTE_idCLIENTE,
+                PAGAMENTO_idPAGAMENTO=orcamento.PAGAMENTO_idPAGAMENTO,
+                QTD_VENDIDA=orcamento.QTD_ITENS,
+                VLR_SUBTOTAL=orcamento.VLR_SUBTOTAL,
+                DESCONTO=orcamento.DESCONTO,
+                VLR_FRETE=orcamento.VLR_FRETE,
+                OBSERVACAO=orcamento.OBSERVACAO,
+                PARCELAMENTO=orcamento.PARCELAMENTO,
+                VLR_TOTAL=orcamento.VLR_TOTAL,
+                ORCAMENTO_ORIGEM=orcamento  # Rastrear origem
+            )
+            
+            # Copiar itens do orçamento para a venda
+            itens_orcamento = ItemOrcamento.objects.filter(ORCAMENTO_idORCAMENTO=orcamento)
+            
+            for item_orc in itens_orcamento:
+                ItemVenda.objects.create(
+                    VENDA_idVENDA=venda,
+                    PRODUTO_idPRODUTO=item_orc.PRODUTO_idPRODUTO,
+                    QTD_ITEM=item_orc.QTD_ITEM,
+                    VALOR_UNITARIO=item_orc.VALOR_UNITARIO,
+                    DESCONTO_ITEM=item_orc.DESCONTO_ITEM,
+                    VLR_TOTAL_ITEM=item_orc.VLR_TOTAL_ITEM
+                )
+            
+            # Atualizar status do orçamento
+            orcamento.STATUS = 'CONVERTIDO'
+            orcamento.save()
+            
+            return JsonResponse({
+                'success': True,
+                'message': f'Orçamento #{orcamento.idORCAMENTO} convertido em Venda #{venda.idVENDA}',
+                'venda_id': venda.idVENDA,
+                'orcamento_id': orcamento.idORCAMENTO
+            })
+            
+        except Orcamento.DoesNotExist:
+            return JsonResponse({
+                'success': False,
+                'message': 'Orçamento não encontrado'
+            }, status=404)
+        except Exception as e:
+            import traceback
+            traceback.print_exc()
+            return JsonResponse({
+                'success': False,
+                'message': f'Erro ao converter orçamento: {str(e)}'
+            }, status=500)
+    
+    return JsonResponse({'success': False, 'message': 'Método não permitido'}, status=405)

@@ -112,6 +112,16 @@
                             <i class="fas fa-file-pdf"></i>
                         </a>
                         
+                        {% if orcamento.STATUS != 'CONVERTIDO' %}
+                        <a href="#" 
+                           class="btn-acao btn-converter" 
+                           onclick="abrirConverterModal({{ orcamento.idORCAMENTO }}); return false;"
+                           title="Converter em Venda"
+                           style="background-color: #4CAF50;">
+                            <i class="fas fa-exchange-alt"></i>
+                        </a>
+                        {% endif %}
+                        
                         <a href="#" 
                            class="btn-acao btn-deletar" 
                            onclick="deletarOrcamento({{ orcamento.idORCAMENTO }}); return false;"
@@ -136,6 +146,25 @@
         </div>
         <div id="modal-content" class="modal-body">
             <p>Carregando...</p>
+        </div>
+    </div>
+</div>
+
+<!-- Modal para Converter Orçamento em Venda -->
+<div id="modal-converter" class="modal-overlay" style="display: none;">
+    <div class="modal-box" style="max-width: 500px;">
+        <div class="modal-header">
+            <h2>Converter Orçamento em Venda</h2>
+            <button class="btn-fechar" onclick="fecharModalConverter()">&times;</button>
+        </div>
+        <div class="modal-body">
+            <p id="converter-info" style="margin-bottom: 15px;">Você tem certeza que deseja converter este orçamento em venda?</p>
+            <p style="font-size: 0.9em; color: #666;">Todos os itens e dados do orçamento serão mantidos, e um registro será criado no histórico de vendas.</p>
+            <hr>
+            <div style="display: flex; gap: 10px; justify-content: flex-end;">
+                <button class="btn-cancelar" onclick="fecharModalConverter()">Cancelar</button>
+                <button class="btn-converter-confirmar" id="btn-converter-confirmar" onclick="confirmarConversao()" style="background-color: #28a745; color: white; border: none; padding: 8px 16px; border-radius: 4px; cursor: pointer;">Converter para Venda</button>
+            </div>
         </div>
     </div>
 </div>
@@ -214,7 +243,15 @@ function verDetalhes(id) {
                 </div>
                 <div style="text-align: right;">
                     <p><strong>Data:</strong> ${orcamento.data}</p>
-                    <p><strong>Status:</strong> ${orcamento.status}</p>
+                    <p>
+                        <strong>Status:</strong>
+                        <select id="status-select-${orcamento.id}" class="status-select" onchange="atualizarStatus(${orcamento.id}, this.value)">
+                            <option value="PENDENTE" ${orcamento.status === 'PENDENTE' ? 'selected' : ''}>Pendente</option>
+                            <option value="APROVADO" ${orcamento.status === 'APROVADO' ? 'selected' : ''}>Aprovado</option>
+                            <option value="REJEITADO" ${orcamento.status === 'REJEITADO' ? 'selected' : ''}>Rejeitado</option>
+                            <option value="CONVERTIDO" ${orcamento.status === 'CONVERTIDO' ? 'selected' : ''}>Convertido</option>
+                        </select>
+                    </p>
                 </div>
             </div>
             
@@ -228,7 +265,12 @@ function verDetalhes(id) {
             <hr>
             <p style="font-size: 0.9em;"><strong>Observação:</strong> ${orcamento.observacao ? orcamento.observacao : '<span style="color:#666">(Nenhuma)</span>'}</p>
             
-            <div style="text-align: center; margin-top: 20px;">
+            <div style="text-align: center; margin-top: 20px; display: flex; gap: 10px; justify-content: center;">
+                ${orcamento.status !== 'CONVERTIDO' ? `
+                    <button class="btn-download" onclick="abrirConverterModal(${orcamento.id})" style="background-color: #28a745;">
+                        <i class="fas fa-exchange-alt"></i> Converter em Venda
+                    </button>
+                ` : '<span style="color: #666; font-weight: bold;">✓ Já foi convertido em venda</span>'}
                 <a href="${orcamento.urlPdf}" class="btn-download" target="_blank">
                     <i class="fas fa-file-pdf"></i> Baixar PDF
                 </a>
@@ -317,6 +359,91 @@ function getCookie(name) {
     }
     return cookieValue;
 }
+
+// ========== CONVERSÃO DE ORÇAMENTO EM VENDA ==========
+let orcamentoEmConverso = null;
+
+function abrirConverterModal(id) {
+    orcamentoEmConverso = id;
+    const orcamento = orcamentosData.find(o => o.id === id);
+    
+    if (!orcamento) return;
+    
+    document.getElementById('converter-info').innerHTML = `
+        <strong>Nº do Orçamento:</strong> ${orcamento.idFormatado}<br>
+        <strong>Cliente:</strong> ${orcamento.cliente}<br>
+        <strong>Valor Total:</strong> R$ ${orcamento.total}
+    `;
+    
+    document.getElementById('modal-converter').style.display = 'flex';
+}
+
+function fecharModalConverter() {
+    document.getElementById('modal-converter').style.display = 'none';
+    orcamentoEmConverso = null;
+}
+
+async function confirmarConversao() {
+    if (!orcamentoEmConverso) return;
+    
+    const btn = document.getElementById('btn-converter-confirmar');
+    btn.disabled = true;
+    btn.textContent = 'Convertendo...';
+    
+    try {
+        const response = await fetch(`/orcamentos/converter/${orcamentoEmConverso}/`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': getCookie('csrftoken')
+            },
+            body: JSON.stringify({})
+        });
+        
+        const data = await response.json();
+        
+        if (data.success) {
+            alert(`✅ ${data.message}`);
+            location.reload();
+        } else {
+            alert(`❌ Erro: ${data.message}`);
+        }
+    } catch (error) {
+        alert(`❌ Erro na conversão: ${error.message}`);
+    } finally {
+        btn.disabled = false;
+        btn.textContent = 'Converter para Venda';
+        fecharModalConverter();
+    }
+}
+
+// ========== ATUALIZAR STATUS ==========
+async function atualizarStatus(orcamentoId, novoStatus) {
+    if (!confirm(`Alterar status para ${novoStatus}?`)) return;
+    
+    try {
+        const response = await fetch(`/orcamentos/status/${orcamentoId}/`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': getCookie('csrftoken')
+            },
+            body: JSON.stringify({ status: novoStatus })
+        });
+        
+        const data = await response.json();
+        
+        if (data.success) {
+            alert(`✅ ${data.message}`);
+            location.reload();
+        } else {
+            alert(`❌ Erro: ${data.message}`);
+        }
+    } catch (error) {
+        alert(`❌ Erro: ${error.message}`);
+    }
+}
+
 </script>
 
 <style>
@@ -340,8 +467,22 @@ function getCookie(name) {
 .btn-pdf { color: #6c757d; }            /* Cinza Escuro */
 .btn-pdf:hover { color: #495057; }
 
+.btn-converter { color: #28a745; }      /* Verde */
+.btn-converter:hover { color: #1e7e34; }
+
 .btn-deletar { color: #dc3545; }        /* Vermelho */
 .btn-deletar:hover { color: #a71d2a; }
+
+/* Select de Status */
+.status-select {
+    padding: 6px 10px;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    font-size: 14px;
+    background: white;
+    cursor: pointer;
+    min-width: 120px;
+}
 
 /* --- Estilos Gerais --- */
 .header-vendas { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; flex-wrap: wrap; gap: 15px; }

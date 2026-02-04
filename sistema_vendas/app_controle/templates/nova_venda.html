@@ -71,6 +71,24 @@
             </select>
         </div>
 
+        <div class="form-group" id="parcelamento-grupo" style="display: none;">
+            <label for="parcelamento">Parcelamento</label>
+            <select id="parcelamento" class="form-control">
+                <option value="vista">À Vista</option>
+                <option value="1x">Parcelado 1x Sem Juros</option>
+                <option value="2x">Parcelado 2x Sem Juros</option>
+                <option value="3x">Parcelado 3x Sem Juros</option>
+                <option value="4x">Parcelado 4x Com Juros</option>
+                <option value="5x">Parcelado 5x Com Juros</option>
+                <option value="6x">Parcelado 6x Com Juros</option>
+                <option value="7x">Parcelado 7x Com Juros</option>
+                <option value="8x">Parcelado 8x Com Juros</option>
+                <option value="10x">Parcelado 10x Com Juros</option>
+                <option value="11x">Parcelado 11x Com Juros</option>
+                <option value="12x">Parcelado 12x Com Juros</option>
+            </select>
+        </div>
+
         <div class="form-group" style="flex: 1;">
             <label for="desconto">Desconto</label>
             <div class="input-group">
@@ -170,6 +188,7 @@ async function carregarProdutos() {
                 option.dataset.valor = produto.valor;
                 option.dataset.estoque = produto.estoque;
                 option.dataset.descricao = produto.descricao;
+                option.dataset.isService = produto.is_service;
                 select.appendChild(option);
             });
         }
@@ -191,7 +210,22 @@ async function carregarFormasPagamento() {
                 const option = document.createElement('option');
                 option.value = forma.id;
                 option.textContent = forma.tipo;
+                option.dataset.tipo = forma.tipo.toLowerCase();
                 select.appendChild(option);
+            });
+            
+            // Adicionar event listener para mostrar/ocultar parcelamento
+            select.addEventListener('change', function() {
+                const selectedOption = this.options[this.selectedIndex];
+                const tipoForma = selectedOption.dataset.tipo;
+                const parcelamentoGrupo = document.getElementById('parcelamento-grupo');
+                
+                // Mostrar select de parcelamento se for cartão de crédito
+                if (tipoForma && (tipoForma.includes('cartão de crédito') || tipoForma.includes('crédito'))) {
+                    parcelamentoGrupo.style.display = 'block';
+                } else {
+                    parcelamentoGrupo.style.display = 'none';
+                }
             });
         }
     } catch (error) {
@@ -219,8 +253,9 @@ document.getElementById('btn-adicionar').addEventListener('click', function() {
     
     const option = produtoSelect.options[produtoSelect.selectedIndex];
     const estoque = parseInt(option.dataset.estoque);
-    
-    if (quantidade > estoque) {
+    const isService = option.dataset.isService === 'true';
+
+    if (!isService && quantidade > estoque) {
         alert(`❌ Estoque insuficiente! Disponível: ${estoque} unidades`);
         return;
     }
@@ -351,11 +386,22 @@ document.getElementById('form-nova-venda').addEventListener('submit', async func
     
     try {
         const csrfToken = getCookie('csrftoken');
+        // Pegar valor de parcelamento se existir e estiver visível
+        let parcelamento = '';
+        const parcelamentoGrupo = document.getElementById('parcelamento-grupo');
+        if (parcelamentoGrupo && parcelamentoGrupo.style.display !== 'none') {
+            const parcelamentoSelect = document.getElementById('parcelamento');
+            if (parcelamentoSelect) {
+                parcelamento = parcelamentoSelect.value;
+            }
+        }
+        
         const dados = {
             cliente_id: parseInt(clienteId),
             forma_pagamento_id: parseInt(formaPagamentoId),
             desconto: desconto,
             frete: frete,
+            parcelamento: parcelamento,
             itens: itensVenda,
             observacao: (document.getElementById('observacao') ? document.getElementById('observacao').value.trim() : '')
         };

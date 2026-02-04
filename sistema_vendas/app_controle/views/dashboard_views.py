@@ -4,6 +4,7 @@ from django.contrib import messages
 from django.db.models import Sum, Count, Q
 from django.utils import timezone
 from datetime import timedelta
+import json
 from ..models import Venda, Estoque, Cliente
 from ..services.auth_services import AuthService
 
@@ -35,15 +36,27 @@ def dashboard(request):
     # Total de itens em estoque - UMA ÚNICA QUERY
     total_estoque = Estoque.objects.aggregate(Sum('QTD_DISPONIVEL'))['QTD_DISPONIVEL__sum'] or 0
     
-    # === DADOS PARA O GRÁFICO (últimos 30 dias) - UMA QUERY OTIMIZADA ===
-    vendas_30_dias = Venda.objects.filter(DT_VENDA__gte=data_30_dias).values('DT_VENDA__date').annotate(
-        total=Sum('VLR_TOTAL'),
-        quantidade=Count('idVENDA')
-    ).order_by('DT_VENDA__date')
+    # === DADOS PARA O GRÁFICO (últimos 30 dias) ===
+    # Buscar todas as vendas dos últimos 30 dias em memória e agrupar
+    vendas_30_dias_queryset = Venda.objects.filter(DT_VENDA__gte=data_30_dias).order_by('DT_VENDA')
     
-    # Formatar dados para o gráfico
-    datas_vendas = [v['DT_VENDA__date'].strftime('%d/%m') for v in vendas_30_dias]
-    valores_vendas = [float(v['quantidade']) for v in vendas_30_dias]
+    # Agrupar por data em Python (mais confiável com timezone-aware datetimes)
+    from collections import defaultdict
+    vendas_por_data_dict = defaultdict(int)
+    
+    for venda in vendas_30_dias_queryset:
+        if venda.DT_VENDA:
+            # Converter para timezone local e pegar só a data
+            data_local = venda.DT_VENDA.astimezone(timezone.get_current_timezone())
+            data_str = data_local.strftime('%d/%m')
+            vendas_por_data_dict[data_str] += 1
+    
+    # Converter para listas ordenadas
+    datas_vendas = sorted(vendas_por_data_dict.keys(), key=lambda x: tuple(map(int, x.split('/'))))
+    valores_vendas = [vendas_por_data_dict[data] for data in datas_vendas]
+    
+    print(f"[DASHBOARD] Datas vendas: {datas_vendas}")
+    print(f"[DASHBOARD] Valores vendas: {valores_vendas}")
     
     # === RECEITA BRUTA vs LÍQUIDA (últimos 30 dias) - UMA QUERY ===
     vendas_30_agregado = Venda.objects.filter(DT_VENDA__gte=data_30_dias).aggregate(
@@ -60,8 +73,8 @@ def dashboard(request):
         'receita_liquida': f"{receita_liquida:.2f}".replace('.', ','),
         'total_vendas': total_vendas,
         'total_estoque': total_estoque,
-        'datas_vendas': datas_vendas,
-        'valores_vendas': valores_vendas,
+        'datas_vendas': json.dumps(datas_vendas),
+        'valores_vendas': json.dumps(valores_vendas),
         'receita_bruta_30': f"{receita_bruta_30:.2f}".replace('.', ','),
         'receita_liquida_30': f"{receita_liquida_30:.2f}".replace('.', ','),
     }

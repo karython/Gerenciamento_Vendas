@@ -77,7 +77,8 @@
                     <th style="width: 40px;">
                         <input type="checkbox" id="selecionar-todos" onchange="selecionarTodas(this)">
                     </th>
-                    <th>Nº</th>
+                    <th>Nº Venda</th>
+                    <th>Nº Orçamento</th>
                     <th>Cliente</th>
                     <th>Data</th>
                     <th>Qtd. Itens</th>
@@ -98,6 +99,16 @@
                     </td>
 
                     <td><strong>{{ venda_formatada }}</strong></td>
+                    
+                    <td>
+                        {% if venda.ORCAMENTO_ORIGEM %}
+                            <span style="background: #e7f3ff; color: #0066cc; padding: 4px 8px; border-radius: 3px; font-weight: bold;">
+                                OR-{{ venda.ORCAMENTO_ORIGEM.idORCAMENTO|stringformat:'05d' }}
+                            </span>
+                        {% else %}
+                            <span style="color: #999;">-</span>
+                        {% endif %}
+                    </td>
                     
                     <td>{{ venda.CLIENTE_idCLIENTE.NOME_CLIENTE }}</td>
                     
@@ -162,6 +173,7 @@
     {
         "id": {{ venda.idVENDA }},
         "idFormatado": "V-{{ venda.idVENDA|stringformat:"05d" }}",
+        "orcamentoOrigem": {% if venda.ORCAMENTO_ORIGEM %}"OR-{{ venda.ORCAMENTO_ORIGEM.idORCAMENTO|stringformat:'05d' }}"{% else %}null{% endif %},
         "data": "{{ venda.DT_VENDA|date:"d/m/Y H:i" }}",
         "cliente": "{{ venda.CLIENTE_idCLIENTE.NOME_CLIENTE|escapejs }}",
         "cpf": "{{ venda.CLIENTE_idCLIENTE.CPF|escapejs }}",
@@ -370,7 +382,8 @@ function verDetalhes(vendaId) {
         <div class="detalhes-venda">
             <div style="display: flex; justify-content: space-between;">
                 <div>
-                    <p><strong>Nº:</strong> ${venda.idFormatado}</p>
+                    <p><strong>Nº Venda:</strong> ${venda.idFormatado}</p>
+                    ${venda.orcamentoOrigem ? `<p><strong>Nº Orçamento:</strong> <span style="background: #e7f3ff; color: #0066cc; padding: 2px 6px; border-radius: 3px;">${venda.orcamentoOrigem}</span></p>` : ''}
                     <p><strong>Cliente:</strong> ${venda.cliente}</p>
                     <p><strong>CPF:</strong> ${venda.cpf}</p>
                     <p><strong>Telefone:</strong> ${venda.telefone}</p>

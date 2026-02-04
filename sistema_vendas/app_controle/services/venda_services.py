@@ -86,7 +86,18 @@ class VendaService:
             quantidade_total += qtd
         
         desconto = Decimal(str(dados.get('desconto', 0)))
-        total = subtotal - desconto
+        frete = Decimal(str(dados.get('frete', 0)))
+        if frete < 0:
+            raise ValueError('O valor do frete não pode ser negativo')
+
+        # Observação (opcional) - validar tamanho
+        observacao = dados.get('observacao', '')
+        if observacao is None:
+            observacao = ''
+        if len(str(observacao)) > 3000:
+            raise ValueError('O campo de observação não pode ter mais que 3000 caracteres')
+
+        total = subtotal - desconto + frete
         
         print(f"[VENDA SERVICE] Subtotal: R$ {subtotal}, Desconto: R$ {desconto}, Total: R$ {total}")
         
@@ -94,6 +105,10 @@ class VendaService:
             CLIENTE_idCLIENTE=cliente,
             PAGAMENTO_idPAGAMENTO=pagamento,
             QTD_VENDIDA=quantidade_total,
+            VLR_SUBTOTAL=subtotal,
+            DESCONTO=desconto,
+            VLR_FRETE=frete,
+            OBSERVACAO=observacao,
             VLR_TOTAL=total
         )
         
@@ -122,8 +137,21 @@ class VendaService:
             estoque.QTD_DISPONIVEL -= quantidade
             estoque.save()
             
+            # Criar ItemVenda
+            valor_unitario = Decimal(str(item_dados.get('valor_unitario', 0)))
+            valor_total = Decimal(str(item_dados.get('valor_total', quantidade * float(valor_unitario))))
+            from ..models import ItemVenda
+            ItemVenda.objects.create(
+                VENDA_idVENDA=venda,
+                PRODUTO_idPRODUTO=produto,
+                QUANTIDADE=quantidade,
+                VLR_UNITARIO=valor_unitario,
+                VLR_TOTAL=valor_total
+            )
+
             print(f"[VENDA SERVICE] ✅ Estoque atualizado para {produto.DESCRICAO}:")
             print(f"[VENDA SERVICE]    Anterior: {estoque_anterior} -> Atual: {estoque.QTD_DISPONIVEL}")
+            print(f"[VENDA SERVICE] ✅ ItemVenda criado para {produto.DESCRICAO}")
         
         print(f"[VENDA SERVICE] ✅ Venda #{venda.idVENDA} finalizada com sucesso!")
         print("=" * 50)
@@ -180,7 +208,7 @@ class VendaService:
         return Venda.objects.select_related(
             'CLIENTE_idCLIENTE',
             'PAGAMENTO_idPAGAMENTO'
-        ).get(idVENDA=venda_id)
+        ).prefetch_related('itens__PRODUTO_idPRODUTO').get(idVENDA=venda_id)
     
     @staticmethod
     @transaction.atomic

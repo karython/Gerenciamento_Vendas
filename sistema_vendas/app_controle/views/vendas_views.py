@@ -5,7 +5,7 @@ from django.http import JsonResponse
 from datetime import datetime
 from ..services.venda_services import VendaService
 from ..services.auth_services import AuthService
-from ..models import Orcamento
+from ..models import Orcamento, Venda, ItemVenda
 
 @AuthService.requer_login
 def vendas(request):
@@ -108,6 +108,64 @@ def orcamentos(request):
     }
     
     return render(request, 'orcamentos.html', context)
+
+@AuthService.requer_login
+def detalhes_venda(request, venda_id):
+    """
+    Retorna os detalhes completos de uma venda incluindo os produtos
+    """
+    try:
+        venda = Venda.objects.select_related(
+            'CLIENTE_idCLIENTE', 
+            'PAGAMENTO_idPAGAMENTO'
+        ).get(idVENDA=venda_id)
+        
+        # Buscar os itens da venda
+        itens = ItemVenda.objects.filter(
+            VENDA_idVENDA=venda
+        ).select_related('PRODUTO_idPRODUTO')
+        
+        # Montar lista de produtos
+        produtos = []
+        for item in itens:
+            produtos.append({
+                'nome': item.PRODUTO_idPRODUTO.NOME_PRODUTO,
+                'quantidade': item.QTD_ITEM,
+                'total': f"{item.VLR_ITEM:.2f}".replace('.', ',')
+            })
+        
+        # Montar dados da venda
+        dados_venda = {
+            'numero': f"V-{venda.idVENDA:05d}",
+            'cliente': venda.CLIENTE_idCLIENTE.NOME_CLIENTE,
+            'telefone': venda.CLIENTE_idCLIENTE.TELEFONE or 'Não informado',
+            'data': venda.DT_VENDA.strftime('%d/%m/%Y %H:%M'),
+            'total': f"{venda.VLR_TOTAL:.2f}".replace('.', ','),
+            'formaPagamento': venda.PAGAMENTO_idPAGAMENTO.TP_PAGAMENTO,
+            'produtos': produtos,
+            'observacao': venda.OBSERVACAO if getattr(venda, 'OBSERVACAO', None) else '',
+            'urlPdf': f"/vendas/pdf/{venda.idVENDA}/"  # Ajuste conforme sua URL
+        }
+        
+        return JsonResponse({
+            'success': True,
+            'venda': dados_venda
+        })
+        
+    except Venda.DoesNotExist:
+        return JsonResponse({
+            'success': False,
+            'message': 'Venda não encontrada'
+        }, status=404)
+        
+    except Exception as e:
+        print(f"[VIEW] Erro ao buscar detalhes da venda: {str(e)}")
+        import traceback
+        traceback.print_exc()
+        return JsonResponse({
+            'success': False,
+            'message': f'Erro ao carregar detalhes: {str(e)}'
+        }, status=500)
 
 @AuthService.requer_login
 def deletar_venda(request, venda_id):

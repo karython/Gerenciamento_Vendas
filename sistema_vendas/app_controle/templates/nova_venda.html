@@ -72,8 +72,19 @@
         </div>
 
         <div class="form-group" style="flex: 1;">
-            <label for="desconto">Desconto (R$)</label>
-            <input type="number" id="desconto" class="form-control" min="0" step="0.01" value="0.00">
+            <label for="desconto">Desconto</label>
+            <div class="input-group">
+                <span class="input-prefix">R$</span>
+                <input type="text" id="desconto" class="form-control currency" inputmode="decimal" value="0,00">
+            </div>
+        </div>
+
+        <div class="form-group" style="flex: 1;">
+            <label for="frete">Frete</label>
+            <div class="input-group">
+                <span class="input-prefix">R$</span>
+                <input type="text" id="frete" class="form-control currency" inputmode="decimal" value="0,00">
+            </div>
         </div>
 
         <div class="form-group" style="font-size: 1.5em; align-self: flex-end;">
@@ -83,6 +94,14 @@
 
     <div style="text-align: right; margin-top: 20px;">
         <button type="submit" class="btn btn-primary btn-large">Finalizar Venda e Gerar PDF</button>
+    </div>
+
+    <div style="margin-top: 16px;">
+        <label for="observacao">Observação (opcional)</label>
+        <textarea id="observacao" maxlength="3000" rows="4" class="form-control" placeholder="Escreva aqui alguma observação para a venda..."></textarea>
+        <div style="text-align: right; font-size: 0.9em; color: #666; margin-top:4px;">
+            <span id="obs-counter">0</span>/3000
+        </div>
     </div>
 
 </form>
@@ -297,14 +316,22 @@ document.addEventListener('click', function(e) {
 // Calcular total com desconto
 function calcularTotal() {
     const subtotal = itensVenda.reduce((sum, item) => sum + item.valor_total, 0);
-    const desconto = parseFloat(document.getElementById('desconto').value) || 0;
-    const total = subtotal - desconto;
-    
+    const desconto = parseCurrencyToFloat(document.getElementById('desconto').value) || 0;
+    const frete = parseCurrencyToFloat(document.getElementById('frete').value) || 0;
+    const total = subtotal - desconto + frete;
+
     document.getElementById('total').textContent = `R$ ${total.toFixed(2)}`;
 }
 
 // Atualizar total quando desconto mudar
 document.getElementById('desconto').addEventListener('input', calcularTotal);
+document.getElementById('frete').addEventListener('input', calcularTotal);
+
+// Observação: contador de caracteres
+const obsElem = document.getElementById('observacao');
+const obsCounter = document.getElementById('obs-counter');
+function updateObsCounter(){ if(!obsElem || !obsCounter) return; obsCounter.textContent = obsElem.value.length; }
+if(obsElem){ obsElem.addEventListener('input', updateObsCounter); updateObsCounter(); }
 
 // Finalizar venda
 document.getElementById('form-nova-venda').addEventListener('submit', async function(e) {
@@ -312,13 +339,14 @@ document.getElementById('form-nova-venda').addEventListener('submit', async func
     
     const clienteId = document.getElementById('cliente').value;
     const formaPagamentoId = document.getElementById('forma-pagamento').value;
-    const desconto = parseFloat(document.getElementById('desconto').value) || 0;
-    
+    const desconto = parseCurrencyToFloat(document.getElementById('desconto').value) || 0;
+    const frete = parseCurrencyToFloat(document.getElementById('frete').value) || 0;
+
     if (!clienteId) { alert('❌ Selecione um cliente'); return; }
     if (itensVenda.length === 0) { alert('❌ Adicione pelo menos um produto'); return; }
     if (!formaPagamentoId) { alert('❌ Selecione uma forma de pagamento'); return; }
     
-    const totalVenda = itensVenda.reduce((sum, item) => sum + item.valor_total, 0) - desconto;
+    const totalVenda = itensVenda.reduce((sum, item) => sum + item.valor_total, 0) - desconto + frete;
     if (!confirm(`🛒 Confirmar venda no valor de R$ ${totalVenda.toFixed(2)}?`)) { return; }
     
     try {
@@ -327,7 +355,9 @@ document.getElementById('form-nova-venda').addEventListener('submit', async func
             cliente_id: parseInt(clienteId),
             forma_pagamento_id: parseInt(formaPagamentoId),
             desconto: desconto,
-            itens: itensVenda
+            frete: frete,
+            itens: itensVenda,
+            observacao: (document.getElementById('observacao') ? document.getElementById('observacao').value.trim() : '')
         };
         
         const response = await fetch("{% url 'criar_venda' %}", {
@@ -355,6 +385,71 @@ document.addEventListener('DOMContentLoaded', function() {
     carregarClientes();
     carregarProdutos();
     carregarFormasPagamento();
+});
+</script>
+
+<style>
+/* Currency input group */
+.input-group{display:flex;align-items:center}
+.input-prefix{background:#f1f1f1;border:1px solid #ced4da;padding:8px 10px;border-right:0;border-radius:4px 0 0 4px}
+.input-group .form-control{border-radius:0 4px 4px 0;padding-left:10px}
+
+/* Remove number input arrows if any (safety) */
+input[type=number]::-webkit-outer-spin-button, input[type=number]::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
+input[type=number] { -moz-appearance: textfield; }
+
+</style>
+
+<script>
+// ----------------------
+// Máscara simplificada de moeda (apenas formata no blur)
+// ----------------------
+function formatCurrencyValue(value){
+    if(value === null || value === undefined) return '0,00';
+    // Remove tudo exceto dígitos, ponto e vírgula
+    const cleaned = String(value).replace(/[^0-9,\.]/g,'');
+    if(cleaned === '') return '0,00';
+    // Normaliza para ponto como decimal
+    const normalized = cleaned.replace(/\.(?=.*\.)/g,'').replace(/,/g,'.');
+    const num = parseFloat(normalized);
+    if(isNaN(num)) return '0,00';
+    // Formata para pt-BR (1.234,56)
+    return new Intl.NumberFormat('pt-BR', {minimumFractionDigits:2, maximumFractionDigits:2}).format(num);
+}
+
+function parseCurrencyToFloat(str){
+    if(!str) return 0;
+    // Remove R$ e espaços
+    const cleaned = String(str).replace(/[^0-9,\.]/g,'').trim();
+    if(cleaned === '') return 0;
+    // Normaliza para ponto decimal e converte
+    const normalized = cleaned.replace(/\.(?=.*\.)/g,'').replace(/,/g,'.');
+    const n = parseFloat(normalized);
+    return isNaN(n) ? 0 : n;
+}
+
+function attachCurrencyMask(selector){
+    const el = document.getElementById(selector);
+    if(!el) return;
+    
+    // Formatar ao carregar
+    el.value = formatCurrencyValue(el.value);
+    
+    // Apenas limpa caracteres inválidos durante digitação
+    el.addEventListener('input', function(e){
+        // Permite apenas: números, ponto, vírgula
+        e.target.value = e.target.value.replace(/[^0-9,\.]/g,'');
+    });
+    
+    // Formata ao sair do campo
+    el.addEventListener('blur', function(e){
+        e.target.value = formatCurrencyValue(e.target.value);
+    });
+}
+
+document.addEventListener('DOMContentLoaded', function(){
+    attachCurrencyMask('desconto');
+    attachCurrencyMask('frete');
 });
 </script>
 {% endblock %}

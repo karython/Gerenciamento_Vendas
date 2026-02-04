@@ -61,13 +61,15 @@ def criar_orcamento(request):
             print("[ORCAMENTO VIEW] Criando novo orçamento")
             print(f"Dados recebidos: {dados}")
             
-            # Calcular subtotal dos itens
+            # Calcular subtotal dos itens e incluir frete
             subtotal = sum(item.get('valor_total', 0) for item in dados.get('itens', []))
             desconto = float(dados.get('desconto', 0))
-            total = subtotal - desconto
+            frete = float(dados.get('frete', 0))
+            total = subtotal - desconto + frete
 
             # Adicionar aos dados
             dados['subtotal'] = subtotal
+            dados['frete'] = frete
             dados['total'] = total
             
             # Usar o service
@@ -224,6 +226,16 @@ def gerar_pdf_orcamento(request, orcamento_id):
         
         c.setFont("Helvetica-Bold", 10)
         c.drawString(margem_esq + 10, y, "Endereço:")
+        c.setFont("Helvetica", 9)
+        
+        # Buscar o endereço do cliente
+        endereco_text = ""
+        enderecos = orcamento.CLIENTE_idCLIENTE.enderecos.all()
+        if enderecos:
+            endereco = enderecos.first()
+            endereco_text = f"{endereco.LOGRADOURO}, {endereco.NUMERO} - {endereco.BAIRRO} - {endereco.CIDADES_idCIDADES.NOME_CIDADE}/{endereco.CIDADES_idCIDADES.UF_idUF.SIGLA} - CEP: {endereco.CEP}"
+        
+        c.drawString(margem_esq + 60, y, endereco_text)
         c.line(margem_esq + 60, y - 2, margem_dir - 10, y - 2)
         
         # --- TÍTULO DO DOCUMENTO ---
@@ -304,13 +316,25 @@ def gerar_pdf_orcamento(request, orcamento_id):
         
         # --- INFORMAÇÕES RESUMIDAS ---
         y -= 25
-        c.setFont("Helvetica", 9)
+        c.setFont("Helvetica-Bold", 11)
         c.drawString(margem_esq + 10, y, f"Forma de Pagamento: {orcamento.PAGAMENTO_idPAGAMENTO.TP_PAGAMENTO}")
         
-        y -= 15
-        # Correção do STATUS (maiúsculo conforme seu modelo)
-        c.drawString(margem_esq + 10, y, f"Status: {orcamento.get_STATUS_display()}")
+
         
+        # Observação (se houver)
+        y -= 20
+        observacao = orcamento.OBSERVACAO if getattr(orcamento, 'OBSERVACAO', None) else ''
+        if observacao:
+            c.setFont("Helvetica-Bold", 10)
+            c.drawString(margem_esq + 10, y, "Observação:")
+            y -= 15
+            c.setFont("Helvetica", 9)
+            max_chars = 100
+            for i in range(0, len(observacao), max_chars):
+                linha = observacao[i:i+max_chars]
+                c.drawString(margem_esq + 10, y, linha)
+                y -= 12
+
         # --- TOTALIZADORES ---
         y -= 30
         c.setFont("Helvetica-Bold", 11)
@@ -319,13 +343,25 @@ def gerar_pdf_orcamento(request, orcamento_id):
         y -= 20
         c.drawString(margem_esq + 10, y, f"Desconto: R$ {float(orcamento.DESCONTO):.2f}")
         
+        y -= 20
+        c.drawString(margem_esq + 10, y, f"Frete: R$ {float(orcamento.VLR_FRETE):.2f}")
+        
         y -= 25
         c.setFont("Helvetica-Bold", 14)
         
         # Caixa de destaque no Total (opcional, igual ao da Venda)
         c.rect(margem_dir - 150, y - 5, 140, 20)
+       
         c.drawRightString(margem_dir - 20, y + 2, f"TOTAL: R$ {float(orcamento.VLR_TOTAL):.2f}")
+        y_ass = height - altura_recibo - 40 + 80 
         
+        c.line(margem_esq + 20, y_ass, margem_esq + 220, y_ass)
+        c.setFont("Helvetica-Bold", 10)
+        c.drawCentredString(margem_esq + 120, y_ass - 15, "Ass. Comprador")
+        
+        c.line(margem_dir - 220, y_ass, margem_dir - 20, y_ass)
+        c.drawCentredString(margem_dir - 120, y_ass - 15, "Assinatura Loja")
+
         # --- RODAPÉ ---
         y -= 50
         c.setFont("Helvetica-Oblique", 8)

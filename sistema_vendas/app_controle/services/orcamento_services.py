@@ -45,15 +45,24 @@ class OrcamentoService:
             # Extrair valores
             vlr_subtotal = Decimal(str(dados.get('subtotal', 0)))
             desconto = Decimal(str(dados.get('desconto', 0)))
+            vlr_frete = Decimal(str(dados.get('frete', 0)))
             vlr_total = Decimal(str(dados.get('total', 0)))
             qtd_itens = len(dados.get('itens', []))
+            observacao = dados.get('observacao', '')
+            if observacao is None:
+                observacao = ''
+            if len(str(observacao)) > 3000:
+                raise ValueError('O campo de observação não pode ter mais que 3000 caracteres')
             
-            # Validar desconto
+            # Validar desconto e frete
             if desconto < 0:
                 raise ValueError('O desconto não pode ser negativo')
             
             if desconto > vlr_subtotal:
                 raise ValueError('O desconto não pode ser maior que o subtotal')
+
+            if vlr_frete < 0:
+                raise ValueError('O valor do frete não pode ser negativo')
             
             # Criar orçamento
             orcamento = Orcamento.objects.create(
@@ -62,6 +71,8 @@ class OrcamentoService:
                 QTD_ITENS=qtd_itens,
                 VLR_SUBTOTAL=vlr_subtotal,
                 DESCONTO=desconto,
+                VLR_FRETE=vlr_frete,
+                OBSERVACAO=observacao,
                 VLR_TOTAL=vlr_total,
                 STATUS='PENDENTE'
             )
@@ -246,6 +257,7 @@ class OrcamentoService:
                 'cliente_id': orcamento.CLIENTE_idCLIENTE.idCLIENTE,
                 'forma_pagamento_id': orcamento.PAGAMENTO_idPAGAMENTO.idPAGAMENTO,
                 'desconto': float(orcamento.DESCONTO),
+                'frete': float(orcamento.VLR_FRETE or 0),
                 'itens': []
             }
             

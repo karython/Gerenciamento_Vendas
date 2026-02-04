@@ -156,13 +156,14 @@
         "itens": [
             {% for item in orcamento.itens.all %}
             {
-                "produto": "{{ item.PRODUTO_idPRODUTO.NOME_PRODUTO|default:item.PRODUTO_idPRODUTO|escapejs }}",
+                "produto": "{{ item.PRODUTO_idPRODUTO.DESCRICAO|default:item.PRODUTO_idPRODUTO|escapejs }}",
                 "qtd": "{{ item.QUANTIDADE|floatformat:0 }}",
                 "unitario": "{{ item.VLR_UNITARIO|floatformat:2 }}",
                 "total": "{{ item.VLR_TOTAL|floatformat:2 }}"
             }{% if not forloop.last %},{% endif %}
             {% endfor %}
         ]
+        ,"observacao": "{{ orcamento.OBSERVACAO|default:''|escapejs }}"
     }{% if not forloop.last %},{% endif %}
     {% endfor %}
 ]
@@ -224,6 +225,8 @@ function verDetalhes(id) {
             <hr>
             <p class="text-right" style="font-size: 1.2em; text-align: right;"><strong>Total: R$ ${orcamento.total}</strong></p>
             <p style="font-size: 0.9em;"><strong>Forma Pagamento:</strong> ${orcamento.formaPagamento}</p>
+            <hr>
+            <p style="font-size: 0.9em;"><strong>Observação:</strong> ${orcamento.observacao ? orcamento.observacao : '<span style="color:#666">(Nenhuma)</span>'}</p>
             
             <div style="text-align: center; margin-top: 20px;">
                 <a href="${orcamento.urlPdf}" class="btn-download" target="_blank">

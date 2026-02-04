@@ -16,30 +16,31 @@ from app_controle.views import (
 
 urlpatterns = [
     path('admin/', admin.site.urls),
-    path('', novavenda_views.nova_venda, name='nova_venda'),
-    path('dashboard/', dashboard_views.dashboard, name='dashboard'),
-
+    
     # === Autenticação (login e cadastro) ===
-    path('', auth_views.index, name='index'),
+    path('', auth_views.index, name='index'),  # ← Página inicial (login)
     path('cadastro/', auth_views.cadastro, name='cadastro'),
     path('login/', auth_views.login, name='login'),
     path('logout/', auth_views.logout, name='logout'),
     
-    # === ESTOQUE === (ordem importa!)
+    # === DASHBOARD ===
+    path('dashboard/', dashboard_views.dashboard, name='dashboard'),
+    
+    # === ESTOQUE ===
     path('estoque/', estoque_views.estoque, name='estoque'),
     path('estoque/cadastrar/', estoque_views.cadastrar_produto, name='cadastrar_produto'),
-    path('estoque/buscar/<int:produto_id>/', estoque_views.buscar_produto_ajax, name='buscar_produto_ajax'),  # ← ADICIONAR
+    path('estoque/buscar/<int:produto_id>/', estoque_views.buscar_produto_ajax, name='buscar_produto_ajax'),
     path('estoque/editar/<int:produto_id>/', estoque_views.editar_produto, name='editar_produto'),
-    path('estoque/deletar/<int:produto_id>/', estoque_views.deletar_produto, name='deletar_produto'),  # ← ADICIONAR
+    path('estoque/deletar/<int:produto_id>/', estoque_views.deletar_produto, name='deletar_produto'),
     path('estoque/reposicao/<int:produto_id>/', estoque_views.adicionar_reposicao, name='adicionar_reposicao'),
     
     # === VENDAS ===
     path('vendas/', vendas_views.vendas, name='vendas'),
-    path('vendas/deletar/<int:venda_id>/', vendas_views.deletar_venda, name='deletar_venda'),
-    path('vendas/deletar-multiplas/', vendas_views.deletar_vendas_multiplas, name='deletar_vendas_multiplas'),
-    path('vendas/nova/', novavenda_views.nova_venda, name='nova_venda'),
+    path('vendas/nova/', novavenda_views.nova_venda, name='nova_venda'),  # ← Movido para cá
     path('vendas/criar/', novavenda_views.criar_venda, name='criar_venda'),
     path('vendas/pdf/<int:venda_id>/', novavenda_views.gerar_pdf_venda, name='gerar_pdf_venda'),
+    path('vendas/deletar/<int:venda_id>/', vendas_views.deletar_venda, name='deletar_venda'),
+    path('vendas/deletar-multiplas/', vendas_views.deletar_vendas_multiplas, name='deletar_vendas_multiplas'),
     
     # === ORÇAMENTOS ===
     path('orcamentos/', orcamento_views.listar_orcamentos, name='orcamentos'),
@@ -47,6 +48,7 @@ urlpatterns = [
     path('orcamentos/criar/', orcamento_views.criar_orcamento, name='criar_orcamento'),
     path('orcamentos/pdf/<int:orcamento_id>/', orcamento_views.gerar_pdf_orcamento, name='gerar_pdf_orcamento'),
     path('orcamentos/deletar/<int:orcamento_id>/', orcamento_views.deletar_orcamento, name='deletar_orcamento'),
+    
     # === APIs ===
     path('api/clientes/', novavenda_views.buscar_clientes, name='buscar_clientes'),
     path('api/produtos/', novavenda_views.buscar_produtos, name='buscar_produtos'),
@@ -60,5 +62,4 @@ urlpatterns = [
     path('clientes/criar/', cliente_views.criar_cliente, name='criar_cliente'),
     path('clientes/editar/<int:id>/', cliente_views.editar_cliente, name='editar_cliente'),
     path('clientes/deletar/<int:id>/', cliente_views.deletar_cliente, name='deletar_cliente'),
-
 ]

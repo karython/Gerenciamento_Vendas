@@ -2,6 +2,7 @@
 from django.db import models
 from .cliente import Cliente
 from .pagamento import Pagamento
+from django.utils import timezone
 
 from .produto import Produto
 
@@ -20,7 +21,7 @@ class Orcamento(models.Model):
         related_name='orcamentos'
     )
     QTD_ITENS = models.IntegerField(default=0)
-    DT_ORCAMENTO = models.DateTimeField(auto_now_add=True)
+    DT_ORCAMENTO = models.DateTimeField(default=timezone.now)
     VLR_SUBTOTAL = models.DecimalField(max_digits=10, decimal_places=2, default=0.00)
     DESCONTO = models.DecimalField(max_digits=10, decimal_places=2, default=0.00)
     VLR_FRETE = models.DecimalField(max_digits=10, decimal_places=2, default=0.00)

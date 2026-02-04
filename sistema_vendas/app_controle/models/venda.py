@@ -2,6 +2,7 @@
 from django.db import models
 from .cliente import Cliente
 from .pagamento import Pagamento
+from django.utils import timezone
 
 class Venda(models.Model):
     idVENDA = models.AutoField(primary_key=True)
@@ -18,7 +19,7 @@ class Venda(models.Model):
         related_name='vendas'
     )
     QTD_VENDIDA = models.IntegerField(default=0)
-    DT_VENDA = models.DateTimeField(auto_now_add=True)
+    DT_VENDA = models.DateTimeField(default=timezone.now)
     VLR_SUBTOTAL = models.DecimalField(max_digits=10, decimal_places=2, default=0.00)
     DESCONTO = models.DecimalField(max_digits=10, decimal_places=2, default=0.00)
     VLR_FRETE = models.DecimalField(max_digits=10, decimal_places=2, default=0.00)

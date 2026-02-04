@@ -233,7 +233,7 @@ def gerar_pdf_orcamento(request, orcamento_id):
         enderecos = orcamento.CLIENTE_idCLIENTE.enderecos.all()
         if enderecos:
             endereco = enderecos.first()
-            endereco_text = f"{endereco.LOGRADOURO}, {endereco.NUMERO} - {endereco.BAIRRO} - {endereco.CIDADES_idCIDADES.NOME_CIDADE}/{endereco.CIDADES_idCIDADES.UF_idUF.SIGLA} - CEP: {endereco.CEP}"
+            endereco_text = f"{endereco.LOGRADOURO}, {endereco.NUMERO} - {endereco.BAIRRO} - {endereco.CIDADES_idCIDADES.NOME_CIDADE}/{endereco.CIDADES_idCIDADES.UF_idUF.NOME_ESTADO} - CEP: {endereco.CEP}"
         
         c.drawString(margem_esq + 60, y, endereco_text)
         c.line(margem_esq + 60, y - 2, margem_dir - 10, y - 2)

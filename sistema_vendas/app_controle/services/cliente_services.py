@@ -1,7 +1,7 @@
 # app_controle/services/cliente_services.py
 
 from django.db import transaction
-from ..models import Cliente, Venda
+from ..models import Cliente, Venda, Endereco, Cidades, UF
 
 class ClienteService:
     
@@ -13,7 +13,7 @@ class ClienteService:
     @staticmethod
     @transaction.atomic
     def criar_cliente(dados):
-        """Cria um novo cliente"""
+        """Cria um novo cliente e seu endereço"""
         print("=" * 50)
         print(f"[CLIENTE SERVICE] Criando cliente: {dados.get('nome')}")
         
@@ -26,14 +26,52 @@ class ClienteService:
         )
         
         print(f"[CLIENTE SERVICE] ✅ Cliente '{cliente.NOME_CLIENTE}' criado com ID: {cliente.idCLIENTE}")
-        print("=" * 50)
         
+        # Criar endereço se informado
+        endereco = dados.get('endereco')
+        cidade_nome = dados.get('cidade')
+        estado = dados.get('estado')
+        cep = dados.get('cep')
+        
+        if endereco and cidade_nome and estado:
+            try:
+                # Buscar ou criar UF
+                uf, criado_uf = UF.objects.get_or_create(
+                    NOME_ESTADO=estado,
+                    defaults={}
+                )
+                if criado_uf:
+                    print(f"[CLIENTE SERVICE] ℹ️ UF '{estado}' criada")
+                
+                # Buscar ou criar Cidade
+                cidade, criado_cidade = Cidades.objects.get_or_create(
+                    NOME_CIDADE=cidade_nome,
+                    UF_idUF=uf,
+                    defaults={'UF_idUF': uf}
+                )
+                if criado_cidade:
+                    print(f"[CLIENTE SERVICE] ℹ️ Cidade '{cidade_nome}' criada")
+                
+                # Criar endereço
+                Endereco.objects.create(
+                    LOGRADOURO=endereco,
+                    NUMERO=dados.get('numero', ''),
+                    BAIRRO=dados.get('bairro', ''),
+                    CEP=cep or '',
+                    CIDADES_idCIDADES=cidade,
+                    CLIENTE_idCLIENTE=cliente
+                )
+                print(f"[CLIENTE SERVICE] ✅ Endereço criado para o cliente")
+            except Exception as e:
+                print(f"[CLIENTE SERVICE] ⚠️ Erro ao criar endereço: {str(e)}")
+        
+        print("=" * 50)
         return cliente
     
     @staticmethod
     @transaction.atomic
     def atualizar_cliente(cliente_id, dados):
-        """Atualiza um cliente existente"""
+        """Atualiza um cliente existente e seu endereço"""
         print("=" * 50)
         print(f"[CLIENTE SERVICE] Atualizando cliente ID: {cliente_id}")
         
@@ -48,6 +86,58 @@ class ClienteService:
         cliente.save()
         
         print(f"[CLIENTE SERVICE] ✅ Cliente '{cliente.NOME_CLIENTE}' atualizado!")
+        
+        # Atualizar endereço
+        endereco = dados.get('endereco')
+        cidade_nome = dados.get('cidade')
+        estado = dados.get('estado')
+        cep = dados.get('cep')
+        
+        if endereco and cidade_nome and estado:
+            try:
+                # Buscar ou criar UF
+                uf, criado_uf = UF.objects.get_or_create(
+                    NOME_ESTADO=estado,
+                    defaults={}
+                )
+                if criado_uf:
+                    print(f"[CLIENTE SERVICE] ℹ️ UF '{estado}' criada")
+                
+                # Buscar ou criar Cidade
+                cidade, criado_cidade = Cidades.objects.get_or_create(
+                    NOME_CIDADE=cidade_nome,
+                    UF_idUF=uf,
+                    defaults={'UF_idUF': uf}
+                )
+                if criado_cidade:
+                    print(f"[CLIENTE SERVICE] ℹ️ Cidade '{cidade_nome}' criada")
+                
+                # Buscar ou criar endereço
+                endereco_obj, criado = Endereco.objects.get_or_create(
+                    CLIENTE_idCLIENTE=cliente,
+                    defaults={
+                        'LOGRADOURO': endereco,
+                        'NUMERO': dados.get('numero', ''),
+                        'BAIRRO': dados.get('bairro', ''),
+                        'CEP': cep or '',
+                        'CIDADES_idCIDADES': cidade
+                    }
+                )
+                
+                # Se já existia, atualizar
+                if not criado:
+                    endereco_obj.LOGRADOURO = endereco
+                    endereco_obj.NUMERO = dados.get('numero', '')
+                    endereco_obj.BAIRRO = dados.get('bairro', '')
+                    endereco_obj.CEP = cep or ''
+                    endereco_obj.CIDADES_idCIDADES = cidade
+                    endereco_obj.save()
+                    print(f"[CLIENTE SERVICE] ✅ Endereço atualizado")
+                else:
+                    print(f"[CLIENTE SERVICE] ✅ Endereço criado")
+            except Exception as e:
+                print(f"[CLIENTE SERVICE] ⚠️ Erro ao atualizar endereço: {str(e)}")
+        
         print("=" * 50)
         
         return cliente

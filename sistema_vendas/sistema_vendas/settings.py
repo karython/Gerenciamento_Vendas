@@ -209,8 +209,9 @@ SESSION_COOKIE_NAME = 'sessionid'
 # Cookie de sessão acessível apenas via HTTP (segurança contra XSS)
 SESSION_COOKIE_HTTPONLY = True
 
-# Salvar sessão a cada requisição (mantém sessão ativa enquanto usar)
-SESSION_SAVE_EVERY_REQUEST = True
+# ⚠️ CRÍTICO EM PRODUÇÃO: Desabilitar SESSION_SAVE_EVERY_REQUEST para reduzir queries ao banco
+# Isso economiza MUITAS requisições ao banco de dados
+SESSION_SAVE_EVERY_REQUEST = os.getenv('SESSION_SAVE_EVERY_REQUEST', 'False').lower() in ('true', '1', 't', 'yes')
 
 # Backend de sessão (banco de dados)
 SESSION_ENGINE = 'django.contrib.sessions.backends.db'

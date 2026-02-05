@@ -96,6 +96,7 @@ class AuthService:
     def autenticar_loja(cnpj, senha):
         """
         Autentica uma loja pelo CNPJ e senha
+        OTIMIZADO: Busca apenas campos necessários para validação
         
         Args:
             cnpj: CNPJ da loja (com ou sem formatação)
@@ -113,8 +114,11 @@ class AuthService:
         print(f"[AUTH SERVICE] CNPJ: {cnpj_formatado}")
         
         try:
-            # Buscar loja
-            loja = Loja.objects.get(CNPJ=cnpj_formatado, ATIVO=True)
+            # OTIMIZAÇÃO: Buscar APENAS os campos necessários para validação
+            # Isso reduz o tamanho da query e a transferência de dados
+            loja = Loja.objects.only(
+                'idLOJA', 'NOME_LOJA', 'CNPJ', 'SENHA', 'ATIVO'
+            ).get(CNPJ=cnpj_formatado, ATIVO=True)
             
             # Verificar senha
             if loja.check_password(senha):
@@ -133,11 +137,16 @@ class AuthService:
     
     @staticmethod
     def loja_logada(request):
-        """Retorna a loja logada na sessão ou None"""
+        """
+        Retorna a loja logada na sessão ou None
+        OTIMIZADO: Busca apenas campos essenciais
+        """
         loja_id = request.session.get('loja_id')
         if loja_id:
             try:
-                return Loja.objects.get(idLOJA=loja_id, ATIVO=True)
+                return Loja.objects.only(
+                    'idLOJA', 'NOME_LOJA', 'CNPJ', 'ATIVO'
+                ).get(idLOJA=loja_id, ATIVO=True)
             except Loja.DoesNotExist:
                 return None
         return None

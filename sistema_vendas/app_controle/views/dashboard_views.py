@@ -5,6 +5,7 @@ from django.db.models import Sum, Count, Q
 from django.utils import timezone
 from datetime import timedelta
 import json
+from django.utils.safestring import mark_safe
 from ..models import Venda, Estoque, Cliente
 from ..services.auth_services import AuthService
 
@@ -67,14 +68,20 @@ def dashboard(request):
     receita_bruta_30 = vendas_30_agregado['receita_bruta_30'] or 0
     receita_liquida_30 = vendas_30_agregado['receita_liquida_30'] or 0
     
+    # Serializar JSON de forma segura para o template (evita escape HTML)
+    datas_vendas_json = mark_safe(json.dumps(datas_vendas, ensure_ascii=False))
+    valores_vendas_json = mark_safe(json.dumps(valores_vendas, ensure_ascii=False))
+
     context = {
         'loja': loja,
         'receita_bruta': f"{receita_bruta:.2f}".replace('.', ','),
         'receita_liquida': f"{receita_liquida:.2f}".replace('.', ','),
         'total_vendas': total_vendas,
         'total_estoque': total_estoque,
-        'datas_vendas': json.dumps(datas_vendas),
-        'valores_vendas': json.dumps(valores_vendas),
+        'datas_vendas': datas_vendas,
+        'valores_vendas': valores_vendas,
+        'datas_vendas_json': datas_vendas_json,
+        'valores_vendas_json': valores_vendas_json,
         'receita_bruta_30': f"{receita_bruta_30:.2f}".replace('.', ','),
         'receita_liquida_30': f"{receita_liquida_30:.2f}".replace('.', ','),
     }

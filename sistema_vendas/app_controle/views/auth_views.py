@@ -10,7 +10,7 @@ def index(request):
     
     if loja:
         # Se já estiver logado, vai para o dashboard
-        return redirect('home')
+        return redirect('dashboard')
     else:
         # Se não estiver logado, mostra página de boas-vindas
         return render(request, 'auth/index.html')
@@ -19,7 +19,7 @@ def cadastro(request):
     """Página de cadastro de nova loja"""
     # Se já estiver logado, redireciona
     if AuthService.loja_logada(request):
-        return redirect('home')
+        return redirect('dashboard')
     
     if request.method == 'POST':
         try:
@@ -59,7 +59,7 @@ def login(request):
     """Página de login"""
     # Se já estiver logado, redireciona
     if AuthService.loja_logada(request):
-        return redirect('home')
+        return redirect('dashboard')
     
     if request.method == 'POST':
         cnpj = request.POST.get('cnpj')

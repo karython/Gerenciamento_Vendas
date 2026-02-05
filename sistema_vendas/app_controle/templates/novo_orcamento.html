@@ -4,7 +4,8 @@
 {% block title %}Novo Orçamento{% endblock %}
 
 {% block dashboard_content %}
-<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+<!-- Novo Orçamento Styles -->
+<link rel="stylesheet" href="{% static 'css/novo_orcamento.css' %}">
 
 <div class="header">
     <h1>Novo Orçamento</h1>
@@ -40,7 +41,7 @@
         </div>
     </div>
 
-    <hr style="margin: 25px 0; border-top: 1px solid #eee;">
+    <hr>
 
     <h3>Itens do Orçamento</h3>
     <table class="tabela">
@@ -68,7 +69,7 @@
         </tfoot>
     </table>
 
-    <hr style="margin: 25px 0; border-top: 1px solid #eee;">
+    <hr>
 
     <div class="form-row" style="align-items: flex-end;">
         <div class="form-group">
@@ -133,395 +134,19 @@
 </form>
 </div>
 
-<script>
-// Variáveis globais
-let itensVenda = [];
-let produtosDisponiveis = [];
-
-// Função para obter CSRF token
-function getCookie(name) {
-    let cookieValue = null;
-    if (document.cookie && document.cookie !== '') {
-        const cookies = document.cookie.split(';');
-        for (let i = 0; i < cookies.length; i++) {
-            const cookie = cookies[i].trim();
-            if (cookie.substring(0, name.length + 1) === (name + '=')) {
-                cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
-                break;
-            }
-        }
-    }
-    return cookieValue;
-}
-
-// Carregar clientes do banco
-async function carregarClientes() {
-    try {
-        const response = await fetch("{% url 'buscar_clientes' %}");
-        const data = await response.json();
-        
-        if (data.success) {
-            const select = document.getElementById('cliente');
-            select.innerHTML = '<option value="">Selecione um cliente...</option>';
-            data.clientes.forEach(cliente => {
-                const option = document.createElement('option');
-                option.value = cliente.id;
-                option.textContent = cliente.label;
-                select.appendChild(option);
-            });
-        }
-    } catch (error) {
-        console.error('Erro ao carregar clientes:', error);
-    }
-}
-
-// Carregar produtos do estoque
-async function carregarProdutos() {
-    try {
-        const response = await fetch("{% url 'buscar_produtos' %}");
-        const data = await response.json();
-        
-        if (data.success) {
-            produtosDisponiveis = data.produtos;
-            const select = document.getElementById('produto');
-            select.innerHTML = '<option value="">Buscar por ID ou Nome do Produto...</option>';
-            data.produtos.forEach(produto => {
-                const option = document.createElement('option');
-                option.value = produto.id;
-                option.textContent = produto.label;
-                option.dataset.valor = produto.valor;
-                option.dataset.estoque = produto.estoque;
-                option.dataset.descricao = produto.descricao;
-                option.dataset.isService = produto.is_service;
-                select.appendChild(option);
-            });
-        }
-    } catch (error) {
-        console.error('Erro ao carregar produtos:', error);
-    }
-}
-
-// Carregar formas de pagamento
-async function carregarFormasPagamento() {
-    try {
-        const response = await fetch("{% url 'buscar_formas_pagamento' %}");
-        const data = await response.json();
-        
-        if (data.success) {
-            const select = document.getElementById('forma-pagamento');
-            data.formas_pagamento.forEach(forma => {
-                const option = document.createElement('option');
-                option.value = forma.id;
-                option.textContent = forma.tipo;
-                option.dataset.tipo = forma.tipo.toLowerCase();
-                select.appendChild(option);
-            });
-            
-            // Adicionar event listener para mostrar/ocultar parcelamento
-            select.addEventListener('change', function() {
-                const selectedOption = this.options[this.selectedIndex];
-                const tipoForma = selectedOption.dataset.tipo;
-                const parcelamentoGrupo = document.getElementById('parcelamento-grupo');
-                
-                // Mostrar select de parcelamento se for cartão de crédito
-                if (tipoForma && (tipoForma.includes('cartão de crédito') || tipoForma.includes('crédito'))) {
-                    parcelamentoGrupo.style.display = 'block';
-                } else {
-                    parcelamentoGrupo.style.display = 'none';
-                }
-            });
-        }
-    } catch (error) {
-        console.error('Erro ao carregar formas de pagamento:', error);
-    }
-}
-
-// Adicionar item à lista
-document.getElementById('btn-adicionar').addEventListener('click', function() {
-    const produtoSelect = document.getElementById('produto');
-    const quantidadeInput = document.getElementById('quantidade');
-    
-    const produtoId = produtoSelect.value;
-    const quantidade = parseInt(quantidadeInput.value);
-    
-    if (!produtoId) { alert('Selecione um produto'); return; }
-    if (!quantidade || quantidade < 1) { alert('Informe uma quantidade válida'); return; }
-    
-    const option = produtoSelect.options[produtoSelect.selectedIndex];
-    // Nota: Em orçamentos, as vezes permite vender sem estoque, mas mantive sua verificação:
-    const estoque = parseInt(option.dataset.estoque);
-    const isService = option.dataset.isService === 'true';
-    if (!isService && quantidade > estoque) {
-        alert(`❌ Estoque insuficiente! Disponível: ${estoque} unidades`);
-        return;
-    }
-    
-    const itemExistente = itensVenda.find(item => item.produto_id === parseInt(produtoId));
-    if (itemExistente) {
-        alert('Produto já adicionado! Remova-o primeiro para alterar a quantidade.');
-        return;
-    }
-    
-    const valorUnitario = parseFloat(option.dataset.valor);
-    const valorTotal = quantidade * valorUnitario;
-    
-    const item = {
-        produto_id: parseInt(produtoId),
-        descricao: option.dataset.descricao,
-        quantidade: quantidade,
-        valor_unitario: valorUnitario,
-        valor_total: valorTotal
-    };
-    
-    itensVenda.push(item);
-    atualizarTabelaItens();
-    
-    produtoSelect.value = '';
-    quantidadeInput.value = 1;
-});
-
-// Atualizar tabela de itens (COM ÍCONES)
-function atualizarTabelaItens() {
-    const tbody = document.getElementById('itens-orcamento');
-    
-    if (itensVenda.length === 0) {
-        tbody.innerHTML = '<tr id="linha-vazia"><td colspan="5" style="text-align: center; padding: 20px; color: #777;">Nenhum item adicionado</td></tr>';
-        document.getElementById('subtotal').textContent = 'R$ 0,00';
-        document.getElementById('total').textContent = 'R$ 0,00';
-        return;
-    }
-    
-    tbody.innerHTML = '';
-    let subtotal = 0;
-    
-    itensVenda.forEach((item, index) => {
-        subtotal += item.valor_total;
-        
-        const tr = document.createElement('tr');
-        tr.innerHTML = `
-            <td>${item.descricao}</td>
-            <td style="text-align: center;">${item.quantidade}</td>
-            <td>R$ ${item.valor_unitario.toFixed(2)}</td>
-            <td>R$ ${item.valor_total.toFixed(2)}</td>
-            <td style="text-align: center;">
-                <a href="#" class="btn-acao btn-deletar btn-remover" data-index="${index}" title="Remover Item">
-                    <i class="fas fa-trash-alt"></i>
-                </a>
-            </td>
-        `;
-        tbody.appendChild(tr);
-    });
-    
-    document.getElementById('subtotal').textContent = `R$ ${subtotal.toFixed(2)}`;
-    calcularTotal();
-}
-
-// Remover item (ATUALIZADO PARA CLIQUE NO ÍCONE)
-document.addEventListener('click', function(e) {
-    const btn = e.target.closest('.btn-remover'); // Pega o botão mesmo clicando no ícone
-    
-    if (btn) {
-        e.preventDefault();
-        const index = parseInt(btn.dataset.index);
-        itensVenda.splice(index, 1);
-        atualizarTabelaItens();
-    }
-});
-
-// Calcular total
-function calcularTotal() {
-    const subtotal = itensVenda.reduce((sum, item) => sum + item.valor_total, 0);
-    const desconto = parseCurrencyToFloat(document.getElementById('desconto').value) || 0;
-    const frete = parseCurrencyToFloat(document.getElementById('frete').value) || 0;
-    const total = subtotal - desconto + frete;
-    document.getElementById('total').textContent = `R$ ${total.toFixed(2)}`;
-}
-
-document.getElementById('desconto').addEventListener('input', calcularTotal);
-document.getElementById('frete').addEventListener('input', calcularTotal);
-
-// Observação: contador de caracteres
-const obsElem = document.getElementById('observacao');
-const obsCounter = document.getElementById('obs-counter');
-function updateObsCounter(){ if(!obsElem || !obsCounter) return; obsCounter.textContent = obsElem.value.length; }
-if(obsElem){ obsElem.addEventListener('input', updateObsCounter); updateObsCounter(); }
-
-// Finalizar Orçamento
-document.getElementById('form-novo-orcamento').addEventListener('submit', async function(e) {
-    e.preventDefault();
-    
-    const clienteId = document.getElementById('cliente').value;
-    const formaPagamentoId = document.getElementById('forma-pagamento').value;
-    const desconto = parseFloat(document.getElementById('desconto').value) || 0;
-    
-    if (!clienteId) { alert('❌ Selecione um cliente'); return; }
-    if (itensVenda.length === 0) { alert('❌ Adicione pelo menos um produto'); return; }
-    if (!formaPagamentoId) { alert('❌ Selecione uma forma de pagamento'); return; }
-    
-    const totalVenda = itensVenda.reduce((sum, item) => sum + item.valor_total, 0) - desconto;
-    
-    if (!confirm(`Confirmar orçamento no valor de R$ ${totalVenda.toFixed(2)}?`)) return;
-    
-    try {
-        // Pegar valor de parcelamento se existir e estiver visível
-        let parcelamento = '';
-        const parcelamentoGrupo = document.getElementById('parcelamento-grupo');
-        if (parcelamentoGrupo && parcelamentoGrupo.style.display !== 'none') {
-            const parcelamentoSelect = document.getElementById('parcelamento');
-            if (parcelamentoSelect) {
-                parcelamento = parcelamentoSelect.value;
-            }
-        }
-        
-        const dados = {
-            cliente_id: parseInt(clienteId),
-            forma_pagamento_id: parseInt(formaPagamentoId),
-            desconto: parseCurrencyToFloat(document.getElementById('desconto').value) || 0,
-            frete: parseCurrencyToFloat(document.getElementById('frete').value) || 0,
-            parcelamento: parcelamento,
-            itens: itensVenda,
-            observacao: (document.getElementById('observacao') ? document.getElementById('observacao').value.trim() : '')
-        };
-        
-        const response = await fetch("{% url 'criar_orcamento' %}", {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'X-CSRFToken': getCookie('csrftoken')
-            },
-            body: JSON.stringify(dados)
-        });
-        
-        const result = await response.json();
-        
-        if (result.success) {
-            alert('✅ ' + result.message);
-            
-            // Tenta baixar PDF se existir ID
-            if (result.orcamento_id) {
-                const link = document.createElement('a');
-                link.href = `/orcamentos/pdf/${result.orcamento_id}/`;
-                link.download = `orcamento_${result.orcamento_id}.pdf`;
-                document.body.appendChild(link);
-                link.click();
-                document.body.removeChild(link);
-            }
-
-            // Redireciona
-            setTimeout(() => {
-                window.location.href = "{% url 'orcamentos' %}";
-            }, 1500);
-        } else {
-            alert('❌ Erro: ' + result.message);
-        }
-    } catch (error) {
-        console.error('Erro:', error);
-        alert('❌ Erro ao finalizar. Verifique o console.');
-    }
-});
-
-document.addEventListener('DOMContentLoaded', function() {
-    carregarClientes();
-    carregarProdutos();
-    carregarFormasPagamento();
-});
-</script>
-
-<style>
-/* Currency input group */
-.input-group{display:flex;align-items:center}
-.input-prefix{background:#f1f1f1;border:1px solid #ced4da;padding:8px 10px;border-right:0;border-radius:4px 0 0 4px}
-.input-group .form-control{border-radius:0 4px 4px 0;padding-left:10px}
-
-/* Remove number input arrows if any (safety) */
-input[type=number]::-webkit-outer-spin-button, input[type=number]::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
-input[type=number] { -moz-appearance: textfield; }
-
-</style>
-
-<script>
-// ----------------------
-// Máscara simplificada de moeda (apenas formata no blur)
-// ----------------------
-function formatCurrencyValue(value){
-    if(value === null || value === undefined) return '0,00';
-    // Remove tudo exceto dígitos, ponto e vírgula
-    const cleaned = String(value).replace(/[^0-9,\.]/g,'');
-    if(cleaned === '') return '0,00';
-    // Normaliza para ponto como decimal
-    const normalized = cleaned.replace(/\.(?=.*\.)/g,'').replace(/,/g,'.');
-    const num = parseFloat(normalized);
-    if(isNaN(num)) return '0,00';
-    // Formata para pt-BR (1.234,56)
-    return new Intl.NumberFormat('pt-BR', {minimumFractionDigits:2, maximumFractionDigits:2}).format(num);
-}
-
-function parseCurrencyToFloat(str){
-    if(!str) return 0;
-    // Remove R$ e espaços
-    const cleaned = String(str).replace(/[^0-9,\.]/g,'').trim();
-    if(cleaned === '') return 0;
-    // Normaliza para ponto decimal e converte
-    const normalized = cleaned.replace(/\.(?=.*\.)/g,'').replace(/,/g,'.');
-    const n = parseFloat(normalized);
-    return isNaN(n) ? 0 : n;
-}
-
-function attachCurrencyMask(selector){
-    const el = document.getElementById(selector);
-    if(!el) return;
-    
-    // Formatar ao carregar
-    el.value = formatCurrencyValue(el.value);
-    
-    // Apenas limpa caracteres inválidos durante digitação
-    el.addEventListener('input', function(e){
-        // Permite apenas: números, ponto, vírgula
-        e.target.value = e.target.value.replace(/[^0-9,\.]/g,'');
-    });
-    
-    // Formata ao sair do campo
-    el.addEventListener('blur', function(e){
-        e.target.value = formatCurrencyValue(e.target.value);
-    });
-}
-
-// Inicializar máscaras
-document.addEventListener('DOMContentLoaded', function(){
-    attachCurrencyMask('desconto');
-    attachCurrencyMask('frete');
-});
-</script>
-
-<style>
-/* Botões de Ação (Ícones) */
-.btn-acao {
-    border: none;
-    background: none;
-    cursor: pointer;
-    font-size: 1.1rem;
-    margin: 0 5px;
-    transition: transform 0.2s, color 0.2s;
-    display: inline-block;
-}
-
-.btn-deletar { color: #dc3545; }
-.btn-deletar:hover { color: #a71d2a; transform: scale(1.15); }
-
-/* Ajustes Gerais */
-.tabela tbody td {
-    vertical-align: middle;
-}
-.btn-success {
-    background-color: #28a745;
-    border-color: #28a745;
-    color: white;
-}
-.btn-success:hover { background-color: #218838; }
-
-.btn-large {
-    padding: 10px 20px;
-    font-size: 1.1em;
-}
-</style>
 {% endblock %}
+
+{% block scripts %}
+<!-- URLs para o JavaScript -->
+<script>
+    window.urls = {
+        buscarClientes: "{% url 'buscar_clientes_orcamento' %}",
+        buscarProdutos: "{% url 'buscar_produtos_orcamento' %}",
+        buscarFormasPagamento: "{% url 'buscar_formas_pagamento_orcamento' %}",
+        criarOrcamento: "{% url 'criar_orcamento' %}",
+        orcamentos: "{% url 'orcamentos' %}"
+    };
+</script>
+<script src="{% static 'js/novo-orcamento.js' %}"></script>
+{% endblock %}
+

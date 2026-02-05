@@ -4,7 +4,8 @@
 {% block title %}Histórico de Vendas{% endblock %}
 
 {% block dashboard_content %}
-<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+<!-- Vendas List Styles -->
+<link rel="stylesheet" href="{% static 'css/vendas.css' %}">
 
 <div class="header-vendas">
     <h1>Histórico de Vendas</h1>
@@ -37,8 +38,8 @@
                        value="{% if data_fim %}{{ data_fim }}{% endif %}">
             </div>
             
-            <button type="submit" class="btn-filtrar">🔍 Filtrar</button>
-            <button type="button" class="btn-limpar" onclick="limparFiltros()">✖ Limpar</button>
+            <button type="submit" class="btn-filtrar">Filtrar</button>
+            <button type="button" class="btn-limpar" onclick="vendasList.limparFiltros()">Limpar</button>
         </form>
     </div>
 </div>
@@ -48,10 +49,10 @@
         <span id="contador-selecionados">0</span> venda(s) selecionada(s)
     </div>
     <div class="selecao-acoes">
-        <button class="btn-deletar-multiplas" onclick="deletarSelecionadas()">
-            🗑️ Deletar Selecionados
+        <button class="btn-deletar-multiplas" onclick="vendasList.deletarSelecionadas()">
+            Deletar Selecionados
         </button>
-        <button class="btn-cancelar" onclick="cancelarSelecao()">
+        <button class="btn-cancelar" onclick="vendasList.cancelarSelecao()">
             Cancelar
         </button>
     </div>
@@ -60,7 +61,7 @@
 {% if data_inicio or data_fim or busca_nome %}
 <div class="filtros-ativos">
     <span class="badge-filtro">
-        📅 Filtros ativos: 
+        Filtros ativos: 
         {% if busca_nome %}Busca: "{{ busca_nome }}"{% endif %}
         {% if data_inicio %}de {{ data_inicio|date:"d/m/Y" }}{% endif %}
         {% if data_fim %}até {{ data_fim|date:"d/m/Y" }}{% endif %}
@@ -75,7 +76,7 @@
             <thead>
                 <tr>
                     <th style="width: 40px;">
-                        <input type="checkbox" id="selecionar-todos" onchange="selecionarTodas(this)">
+                        <input type="checkbox" id="selecionar-todos" onchange="vendasList.selecionarTodas(this)">
                     </th>
                     <th>Nº Venda</th>
                     <th>Nº Orçamento</th>
@@ -95,7 +96,7 @@
                         <input type="checkbox"
                             class="checkbox-venda"
                             value="{{ venda.idVENDA }}"
-                            onchange="atualizarSelecao()">
+                            onchange="vendasList.atualizarSelecao()">
                     </td>
 
                     <td><strong>{{ venda_formatada }}</strong></td>
@@ -103,7 +104,7 @@
                     <td>
                         {% if venda.ORCAMENTO_ORIGEM %}
                             <span style="background: #e7f3ff; color: #0066cc; padding: 4px 8px; border-radius: 3px; font-weight: bold;">
-                                OR-{{ venda.ORCAMENTO_ORIGEM.idORCAMENTO|stringformat:'05d' }}
+                                OR-{{ venda.ORCAMENTO_ORIGEM.IdOrcamento|stringformat:'05d' }}
                             </span>
                         {% else %}
                             <span style="color: #999;">-</span>
@@ -121,12 +122,11 @@
                     <td>{{ venda.PAGAMENTO_idPAGAMENTO.TP_PAGAMENTO }}</td>
 
                     <td style="text-align: center;">
-                        <a href="#"
-                           class="btn-acao btn-detalhes"
-                           onclick="verDetalhes('{{ venda.idVENDA }}'); return false;"
-                           title="Ver Detalhes">
+                        <button class="btn-acao btn-detalhes" 
+                                onclick="vendasList.verDetalhes('{{ venda.idVENDA }}')"
+                                title="Ver Detalhes">
                             <i class="fas fa-eye"></i>
-                        </a>
+                        </button>
 
                         <a href="{% url 'gerar_pdf_venda' venda.idVENDA %}"
                            class="btn-acao btn-imprimir"
@@ -135,12 +135,11 @@
                             <i class="fas fa-print"></i>
                         </a>
 
-                        <a href="#"
-                           class="btn-acao btn-deletar"
-                           onclick="deletarVenda('{{ venda.idVENDA }}', '{{ venda_formatada }}'); return false;"
-                           title="Deletar Venda">
+                        <button class="btn-acao btn-deletar"
+                                onclick="vendasList.deletarVenda('{{ venda.idVENDA }}', '{{ venda_formatada }}')"
+                                title="Deletar Venda">
                             <i class="fas fa-trash-alt"></i>
-                        </a>
+                        </button>
                     </td>
                 </tr>
                 {% endwith %}
@@ -159,7 +158,7 @@
     <div class="modal-box">
         <div class="modal-header">
             <h2>Detalhes da Venda</h2>
-            <button class="btn-fechar" onclick="fecharModal()">&times;</button>
+            <button class="btn-fechar" onclick="vendasList.fecharModal()">&times;</button>
         </div>
         <div id="modal-content" class="modal-body">
             <p>Carregando...</p>
@@ -167,13 +166,14 @@
     </div>
 </div>
 
+<!-- Dados JSON das vendas -->
 <script id="vendas-data" type="application/json">
 [
     {% for venda in vendas %}
     {
         "id": {{ venda.idVENDA }},
         "idFormatado": "V-{{ venda.idVENDA|stringformat:"05d" }}",
-        "orcamentoOrigem": {% if venda.ORCAMENTO_ORIGEM %}"OR-{{ venda.ORCAMENTO_ORIGEM.idORCAMENTO|stringformat:'05d' }}"{% else %}null{% endif %},
+        "orcamentoOrigem": {% if venda.ORCAMENTO_ORIGEM %}"OR-{{ venda.ORCAMENTO_ORIGEM.IdOrcamento|stringformat:'05d' }}"{% else %}null{% endif %},
         "data": "{{ venda.DT_VENDA|date:"d/m/Y H:i" }}",
         "cliente": "{{ venda.CLIENTE_idCLIENTE.NOME_CLIENTE|escapejs }}",
         "cpf": "{{ venda.CLIENTE_idCLIENTE.CPF|escapejs }}",
@@ -201,659 +201,9 @@
 ]
 </script>
 
-<script>
-// Carregar dados das vendas
-const vendasData = JSON.parse(document.getElementById('vendas-data').textContent);
-console.log('Dados de vendas carregados:', vendasData);
-vendasData.forEach((v, idx) => {
-    console.log(`Venda ${idx}:`, v.idFormatado, '- Itens:', v.itens);
-});
-
-// ========== SELEÇÃO MÚLTIPLA ==========
-function selecionarTodas(checkbox) {
-    const checkboxes = document.querySelectorAll('.checkbox-venda');
-    checkboxes.forEach(cb => {
-        cb.checked = checkbox.checked;
-    });
-    atualizarSelecao();
-}
-
-function atualizarSelecao() {
-    const checkboxes = document.querySelectorAll('.checkbox-venda:checked');
-    const quantidade = checkboxes.length;
-    
-    document.getElementById('contador-selecionados').textContent = quantidade;
-    
-    if (quantidade > 0) {
-        document.getElementById('barra-selecao').style.display = 'flex';
-    } else {
-        document.getElementById('barra-selecao').style.display = 'none';
-    }
-}
-
-function cancelarSelecao() {
-    document.querySelectorAll('.checkbox-venda').forEach(cb => cb.checked = false);
-    document.getElementById('selecionar-todos').checked = false;
-    atualizarSelecao();
-}
-
-// ✅ VERSÃO CORRIGIDA - Deleta uma por vez (sequencialmente)
-async function deletarSelecionadas() {
-    const checkboxes = document.querySelectorAll('.checkbox-venda:checked');
-    const vendasIds = Array.from(checkboxes).map(cb => parseInt(cb.value));
-    
-    if (vendasIds.length === 0) {
-        alert('Nenhuma venda selecionada!');
-        return;
-    }
-    
-    if (!confirm(`⚠️ Tem certeza que deseja deletar ${vendasIds.length} venda(s)?\n\nEsta ação não pode ser desfeita!`)) {
-        return;
-    }
-    
-    console.log(`Deletando ${vendasIds.length} vendas sequencialmente...`);
-    
-    let deletadas = 0;
-    let erros = [];
-    
-    // Deletar uma por vez para evitar "database is locked" do SQLite
-    for (const vendaId of vendasIds) {
-        try {
-            console.log(`Deletando venda ${vendaId}...`);
-            
-            const response = await fetch(`/vendas/deletar/${vendaId}/`, {
-                method: 'POST',
-                headers: {
-                    'X-CSRFToken': getCookie('csrftoken'),
-                    'Content-Type': 'application/json'
-                }
-            });
-            
-            const data = await response.json();
-            
-            if (data.success) {
-                deletadas++;
-                console.log(`✅ Venda ${vendaId} deletada`);
-            } else {
-                erros.push(`Venda ${vendaId}: ${data.message}`);
-                console.error(`❌ Erro na venda ${vendaId}:`, data.message);
-            }
-        } catch (error) {
-            erros.push(`Venda ${vendaId}: ${error.message}`);
-            console.error(`❌ Erro na venda ${vendaId}:`, error);
-        }
-        
-        // Pequeno delay entre cada operação (100ms)
-        await new Promise(resolve => setTimeout(resolve, 100));
-    }
-    
-    // Mostrar resultado
-    if (erros.length > 0) {
-        alert(`⚠️ Resultado:\n\n✅ ${deletadas} venda(s) deletada(s) com sucesso\n❌ ${erros.length} erro(s) encontrado(s):\n\n${erros.join('\n')}`);
-    } else {
-        alert(`✅ Todas as ${deletadas} venda(s) foram deletadas com sucesso!`);
-    }
-    
-    // Recarregar página
-    location.reload();
-}
-
-// ========== DELETAR INDIVIDUAL ==========
-function deletarVenda(vendaId, vendaNumero) {
-    if (!confirm(`⚠️ Tem certeza que deseja deletar a venda ${vendaNumero}?\n\nEsta ação não pode ser desfeita!`)) {
-        return;
-    }
-    
-    console.log(`Deletando venda ID: ${vendaId}`);
-    
-    fetch(`/vendas/deletar/${vendaId}/`, {
-        method: 'POST',
-        headers: {
-            'X-CSRFToken': getCookie('csrftoken'),
-            'Content-Type': 'application/json'
-        }
-    })
-    .then(response => response.json())
-    .then(data => {
-        if (data.success) {
-            alert(data.message);
-            location.reload();
-        } else {
-            alert(`❌ ${data.message}`);
-        }
-    })
-    .catch(error => {
-        console.error('Erro:', error);
-        alert('❌ Erro ao deletar venda. Tente novamente.');
-    });
-}
-
-// ========== MODAL DETALHES ==========
-function verDetalhes(vendaId) {
-    console.log('Ver detalhes da venda:', vendaId);
-    
-    const id = parseInt(vendaId);
-    const venda = vendasData.find(v => v.id === id);
-    
-    if (!venda) {
-        console.error('Venda não encontrada:', vendaId);
-        return;
-    }
-    
-    console.log('Venda encontrada:', venda);
-    console.log('Itens da venda:', venda.itens);
-    
-    // Construir tabela de itens dinamicamente
-    let itensHtml = `
-        <table style="width: 100%; border-collapse: collapse; margin-top: 10px; font-size: 14px;">
-            <thead style="background: #f8f9fa;">
-                <tr>
-                    <th style="padding: 8px; border-bottom: 2px solid #ddd; text-align: left;">Produto</th>
-                    <th style="padding: 8px; border-bottom: 2px solid #ddd; text-align: center;">Qtd</th>
-                    <th style="padding: 8px; border-bottom: 2px solid #ddd; text-align: right;">Total</th>
-                </tr>
-            </thead>
-            <tbody>
-    `;
-
-    if (venda.itens && venda.itens.length > 0) {
-        venda.itens.forEach(item => {
-            console.log('Processando item:', item);
-            itensHtml += `
-                <tr>
-                    <td style="padding: 8px; border-bottom: 1px solid #eee;">${item.produto}</td>
-                    <td style="padding: 8px; border-bottom: 1px solid #eee; text-align: center;">${item.qtd}</td>
-                    <td style="padding: 8px; border-bottom: 1px solid #eee; text-align: right;">R$ ${item.total}</td>
-                </tr>
-            `;
-        });
-    } else {
-        console.warn('Nenhum item encontrado para a venda');
-        itensHtml += `
-            <tr>
-                <td colspan="3" style="padding: 8px; text-align: center; color: #999;">Nenhum item encontrado</td>
-            </tr>
-        `;
-    }
-
-    itensHtml += `</tbody></table>`;
-
-    const html = `
-        <div class="detalhes-venda">
-            <div style="display: flex; justify-content: space-between;">
-                <div>
-                    <p><strong>Nº Venda:</strong> ${venda.idFormatado}</p>
-                    ${venda.orcamentoOrigem ? `<p><strong>Nº Orçamento:</strong> <span style="background: #e7f3ff; color: #0066cc; padding: 2px 6px; border-radius: 3px;">${venda.orcamentoOrigem}</span></p>` : ''}
-                    <p><strong>Cliente:</strong> ${venda.cliente}</p>
-                    <p><strong>CPF:</strong> ${venda.cpf}</p>
-                    <p><strong>Telefone:</strong> ${venda.telefone}</p>
-                </div>
-                <div style="text-align: right;">
-                    <p><strong>Data:</strong> ${venda.data}</p>
-                </div>
-            </div>
-            
-            <hr>
-            <h4>Itens da Venda:</h4>
-            ${itensHtml}
-            
-            <hr>
-            <p class="text-right" style="font-size: 1.2em; text-align: right;"><strong>Total: R$ ${venda.valorTotal}</strong></p>
-            <p style="font-size: 0.9em;"><strong>Subtotal:</strong> R$ ${venda.subtotal}</p>
-            <p style="font-size: 0.9em;"><strong>Desconto:</strong> R$ ${venda.desconto}</p>
-            <p style="font-size: 0.9em;"><strong>Frete:</strong> R$ ${venda.frete}</p>
-            <hr>
-            <p style="font-size: 0.9em;"><strong>Observação:</strong> ${venda.observacao ? venda.observacao : '<span style="color:#666">(Nenhuma)</span>'}</p>
-            <p style="font-size: 0.9em;"><strong>Forma de Pagamento:</strong> ${venda.formaPagamento}</p>
-            
-            <div style="text-align: center; margin-top: 20px;">
-                <a href="${venda.urlPdf}" class="btn-download" target="_blank">
-                    <i class="fas fa-file-pdf"></i> Baixar PDF
-                </a>
-            </div>
-        </div>
-    `;
-    
-    document.getElementById('modal-content').innerHTML = html;
-    document.getElementById('modal-detalhes').style.display = 'flex';
-}
-
-function fecharModal() {
-    document.getElementById('modal-detalhes').style.display = 'none';
-}
-
-function limparFiltros() {
-    window.location.href = window.location.pathname;
-}
-
-// Função auxiliar para pegar o CSRF token
-function getCookie(name) {
-    let cookieValue = null;
-    if (document.cookie && document.cookie !== '') {
-        const cookies = document.cookie.split(';');
-        for (let i = 0; i < cookies.length; i++) {
-            const cookie = cookies[i].trim();
-            if (cookie.substring(0, name.length + 1) === (name + '=')) {
-                cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
-                break;
-            }
-        }
-    }
-    return cookieValue;
-}
-
-// Fechar modal ao clicar fora
-document.getElementById('modal-detalhes').addEventListener('click', function(e) {
-    if (e.target === this) {
-        fecharModal();
-    }
-});
-
-// Validação de datas
-document.getElementById('data-fim').addEventListener('change', function() {
-    const dataInicio = document.getElementById('data-inicio').value;
-    const dataFim = this.value;
-    
-    if (dataInicio && dataFim && dataFim < dataInicio) {
-        alert('A data final não pode ser anterior à data inicial!');
-        this.value = '';
-    }
-});
-</script>
-
-<style>
-/* Estilos para os Ícones de Ação */
-.btn-acao {
-    border: none;
-    background: none;
-    cursor: pointer;
-    font-size: 1.1rem;
-    margin: 0 8px;
-    transition: transform 0.2s, color 0.2s;
-    display: inline-block;
-    color: #555;
-}
-
-.btn-acao:hover {
-    transform: scale(1.15);
-}
-
-/* Cores Específicas */
-.btn-detalhes {
-    color: #007bff;
-}
-.btn-detalhes:hover {
-    color: #0056b3;
-}
-
-.btn-imprimir {
-    color: #6c757d;
-}
-.btn-imprimir:hover {
-    color: #495057;
-}
-
-.btn-deletar {
-    color: #dc3545;
-}
-.btn-deletar:hover {
-    color: #a71d2a;
-}
-
-/* ---------------------------------- */
-
-.header-vendas {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    margin-bottom: 20px;
-    flex-wrap: wrap;
-    gap: 15px;
-}
-
-.header-vendas h1 {
-    font-size: 24px;
-    color: #333;
-    margin: 0;
-}
-
-.header-right {
-    display: flex;
-    align-items: center;
-}
-
-.filtro-form {
-    display: flex;
-    gap: 10px;
-    align-items: center;
-    flex-wrap: wrap;
-}
-
-.filtro-group {
-    display: flex;
-    flex-direction: column;
-    gap: 5px;
-}
-
-.filtro-group label {
-    font-size: 12px;
-    color: #666;
-    font-weight: 500;
-}
-
-.input-data,
-.input-busca {
-    padding: 8px 12px;
-    border: 1px solid #ccc;
-    border-radius: 4px;
-    font-size: 14px;
-    min-width: 150px;
-}
-
-.input-busca {
-    min-width: 200px;
-}
-
-.input-data:focus,
-.input-busca:focus {
-    outline: none;
-    border-color: #007bff;
-    box-shadow: 0 0 0 3px rgba(0, 123, 255, 0.1);
-}
-
-.btn-filtrar {
-    padding: 8px 16px;
-    background: #007bff;
-    color: white;
-    border: none;
-    border-radius: 4px;
-    cursor: pointer;
-    font-size: 14px;
-    font-weight: 500;
-    margin-top: 22px;
-}
-
-.btn-filtrar:hover {
-    background: #0056b3;
-}
-
-.btn-limpar {
-    padding: 8px 16px;
-    background: #6c757d;
-    color: white;
-    border: none;
-    border-radius: 4px;
-    cursor: pointer;
-    font-size: 14px;
-    font-weight: 500;
-    margin-top: 22px;
-}
-
-.btn-limpar:hover {
-    background: #5a6268;
-}
-
-/* Barra de seleção múltipla */
-.barra-selecao {
-    background: #fff3cd;
-    border: 1px solid #ffc107;
-    border-radius: 6px;
-    padding: 12px 16px;
-    margin-bottom: 15px;
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-}
-
-.selecao-info {
-    font-weight: 600;
-    color: #856404;
-}
-
-.selecao-acoes {
-    display: flex;
-    gap: 10px;
-}
-
-.btn-deletar-multiplas {
-    padding: 8px 16px;
-    background: #dc3545;
-    color: white;
-    border: none;
-    border-radius: 4px;
-    cursor: pointer;
-    font-size: 14px;
-    font-weight: 500;
-}
-
-.btn-deletar-multiplas:hover {
-    background: #c82333;
-}
-
-.btn-cancelar {
-    padding: 8px 16px;
-    background: #6c757d;
-    color: white;
-    border: none;
-    border-radius: 4px;
-    cursor: pointer;
-    font-size: 14px;
-    font-weight: 500;
-}
-
-.btn-cancelar:hover {
-    background: #5a6268;
-}
-
-.filtros-ativos {
-    background: #e7f3ff;
-    border: 1px solid #b3d9ff;
-    border-radius: 6px;
-    padding: 12px 16px;
-    margin-bottom: 20px;
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-}
-
-.badge-filtro {
-    color: #004085;
-    font-weight: 500;
-    font-size: 14px;
-}
-
-.total-resultados {
-    color: #004085;
-    font-weight: 600;
-    font-size: 14px;
-}
-
-.card-vendas {
-    background: white;
-    border-radius: 8px;
-    padding: 20px;
-    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-}
-
-.tabela-vendas {
-    width: 100%;
-    border-collapse: collapse;
-}
-
-.tabela-vendas thead th {
-    background: #f8f9fa;
-    padding: 12px;
-    text-align: left;
-    font-weight: 600;
-    border-bottom: 2px solid #dee2e6;
-    color: #495057;
-}
-
-.tabela-vendas tbody td {
-    padding: 12px;
-    border-bottom: 1px solid #dee2e6;
-}
-
-.tabela-vendas tbody tr:hover {
-    background: #f8f9fa;
-}
-
-/* Empty State */
-.empty-state {
-    text-align: center;
-    padding: 60px 20px;
-    color: #6c757d;
-}
-
-.empty-state i {
-    font-size: 64px;
-    margin-bottom: 20px;
-    opacity: 0.3;
-}
-
-.empty-state p {
-    font-size: 18px;
-    margin: 0;
-}
-
-/* Modal */
-.modal-overlay {
-    position: fixed;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    background: rgba(0, 0, 0, 0.5);
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    z-index: 1000;
-}
-
-.modal-box {
-    background: white;
-    border-radius: 8px;
-    width: 90%;
-    max-width: 600px;
-    max-height: 80vh;
-    overflow-y: auto;
-    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-}
-
-.modal-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    padding: 20px;
-    border-bottom: 1px solid #dee2e6;
-}
-
-.modal-header h2 {
-    margin: 0;
-    font-size: 20px;
-    color: #333;
-}
-
-.btn-fechar {
-    background: none;
-    border: none;
-    font-size: 28px;
-    color: #999;
-    cursor: pointer;
-    line-height: 1;
-}
-
-.btn-fechar:hover {
-    color: #333;
-}
-
-.modal-body {
-    padding: 20px;
-}
-
-.detalhes-venda p {
-    margin: 10px 0;
-    font-size: 14px;
-}
-
-.detalhes-venda hr {
-    margin: 15px 0;
-    border: none;
-    border-top: 1px solid #dee2e6;
-}
-
-.btn-download {
-    display: inline-block;
-    padding: 10px 20px;
-    background: #007bff;
-    color: white;
-    text-decoration: none;
-    border-radius: 4px;
-    font-weight: 500;
-}
-
-.btn-download:hover {
-    background: #0056b3;
-}
-
-/* Tabela de Produtos no Modal */
-.tabela-produtos-modal {
-    width: 100%;
-    border-collapse: collapse;
-    margin-top: 10px;
-}
-
-.tabela-produtos-modal thead th {
-    background: #f8f9fa;
-    padding: 10px;
-    text-align: left;
-    font-weight: 600;
-    border-bottom: 2px solid #dee2e6;
-    color: #495057;
-    font-size: 14px;
-}
-
-.tabela-produtos-modal tbody td {
-    padding: 10px;
-    border-bottom: 1px solid #dee2e6;
-    font-size: 14px;
-}
-
-.tabela-produtos-modal tbody tr:last-child td {
-    border-bottom: none;
-}
-
-/* Responsive */
-@media (max-width: 768px) {
-    .header-vendas {
-        flex-direction: column;
-        align-items: flex-start;
-    }
-    
-    .filtro-form {
-        width: 100%;
-    }
-    
-    .filtro-group {
-        flex: 1;
-        min-width: 120px;
-    }
-    
-    .filtros-ativos,
-    .barra-selecao {
-        flex-direction: column;
-        gap: 10px;
-        align-items: flex-start;
-    }
-    
-    .selecao-acoes {
-        width: 100%;
-    }
-    
-    .btn-deletar-multiplas,
-    .btn-cancelar {
-        flex: 1;
-    }
-}
-</style>
 {% endblock %}
+
+{% block scripts %}
+<script src="{% static 'js/vendas-list.js' %}"></script>
+{% endblock %}
+

@@ -1,6 +1,10 @@
 /* static/css/style.css */
 @import "media.css";
 @import "modais/modais.css";
+@import "dashboard.css";
+@import "nova_venda.css";
+@import "vendas.css";
+@import "novo_orcamento.css";
 
 /* ----- Variáveis de Cor (Paleta de 3 cores + tons) ----- */
 :root {

@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Bem-vindo - Sistema de Vendas</title>
+    {% load static %}
+    <link rel="stylesheet" href="{% static 'css/style.css' %}">
+    <script src="{% static 'js/loader.js' %}"></script>
+</head>
+<body class="index-body">
+    <div class="index-container">
+        <div class="index-card">
+            <div class="index-header">
+                <img src="{% static 'img/logo.png' %}" alt="Logo" style="width: 160px; margin-bottom: 12px;">
+                <h1>Bem-vindo ao Sistema de Vendas</h1>
+                <p>Gerencie sua loja, estoque e vendas com facilidade.</p>
+            </div>
+
+            <div class="index-actions">
+                <a href="{% url 'login' %}" class="login-btn login-btn-primary">Entrar</a>
+                <a href="{% url 'cadastro' %}" class="login-btn login-btn-secondary">Criar conta</a>
+            </div>
+
+            <div class="index-footer">
+                <p>Já possui conta? <a href="{% url 'login' %}">Faça login</a></p>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Pequeno UX: mostrar loader ao clicar nos botões
+        document.querySelectorAll('.login-btn').forEach(function(el) {
+            el.addEventListener('click', function() {
+                mostrarLoader('Carregando...');
+            });
+        });
+    </script>
+</body>
+</html>

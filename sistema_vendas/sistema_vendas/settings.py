@@ -49,7 +49,7 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
-    'app_controle'
+    'sistema_vendas.app_controle'
 ]
 
 MIDDLEWARE = [

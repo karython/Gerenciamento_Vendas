@@ -49,7 +49,7 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
-    'sistema_vendas.app_controle'
+    'app_controle'  # ✅ CORRIGIDO: sem prefixo sistema_vendas
 ]
 
 MIDDLEWARE = [
@@ -60,10 +60,10 @@ MIDDLEWARE = [
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
-    'sistema_vendas.app_controle.middleware.SessionExpireMiddleware',
+    'app_controle.middleware.SessionExpireMiddleware',  # ✅ CORRIGIDO
 ]
 
-ROOT_URLCONF = 'sistema_vendas.sistema_vendas.urls'
+ROOT_URLCONF = 'sistema_vendas.urls'  # ✅ CORRIGIDO
 
 TEMPLATES = [
     {
@@ -80,7 +80,7 @@ TEMPLATES = [
     },
 ]
 
-WSGI_APPLICATION = 'sistema_vendas.sistema_vendas.wsgi.application'
+WSGI_APPLICATION = 'sistema_vendas.wsgi.application'  # ✅ CORRIGIDO
 
 
 # Database
@@ -143,7 +143,7 @@ USE_TZ = True
 STATIC_URL = '/static/'
 
 # During development, also look for static files in the project-level `static/` folder
-STATICFILES_DIRS = [BASE_DIR / 'sistema_vendas' / 'app_controle' / 'static']
+STATICFILES_DIRS = [BASE_DIR / 'app_controle' / 'static']  # ✅ CORRIGIDO
 
 # Optional: directory used by `collectstatic` in production
 STATIC_ROOT = BASE_DIR / "staticfiles"

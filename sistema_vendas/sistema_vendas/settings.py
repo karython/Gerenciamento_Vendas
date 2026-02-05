@@ -55,6 +55,7 @@ INSTALLED_APPS = [
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
+    'whitenoise.middleware.WhiteNoiseMiddleware',
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',
@@ -282,3 +283,17 @@ LOGGING = {
 # Criar diretório de logs se não existir
 LOG_DIR = BASE_DIR / 'logs'
 LOG_DIR.mkdir(exist_ok=True)
+
+# Static files (CSS, JavaScript, Images)
+STATIC_URL = '/static/'
+
+# Diretórios onde o Django procura arquivos estáticos durante desenvolvimento
+STATICFILES_DIRS = [
+    BASE_DIR / 'app_controle' / 'static',
+]
+
+# Diretório onde collectstatic coleta todos os arquivos estáticos para produção
+STATIC_ROOT = BASE_DIR / 'staticfiles'
+
+# Configuração do WhiteNoise para servir arquivos estáticos em produção
+STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'

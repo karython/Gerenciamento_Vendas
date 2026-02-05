@@ -12,10 +12,15 @@ from app_controle.views import (
     home_views,
     logout_views,
     auth_views,
+    health_views,
 )
 
 urlpatterns = [
     path('admin/', admin.site.urls),
+    
+    # === Health Check / Keep-Alive (Render) ===
+    path('health/', health_views.health_check, name='health_check'),
+    path('health/ping/', health_views.health_check_simple, name='health_ping'),
     
     # === Autenticação (login e cadastro) ===
     path('', auth_views.index, name='index'),  # ← Página inicial (login)

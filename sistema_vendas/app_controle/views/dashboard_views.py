@@ -8,15 +8,15 @@ import json
 from django.utils.safestring import mark_safe
 from ..models import Venda, Estoque, Cliente
 from ..services.auth_services import AuthService
+from ..utils.security import requer_login
 
 
+@requer_login
 def dashboard(request):
     """Dashboard com dados reais do banco de dados - OTIMIZADO"""
     
-    # Verificar se está logado
+    # Loja já foi validada pelo decorator @requer_login
     loja = AuthService.loja_logada(request)
-    if not loja:
-        return redirect('login')
     
     # Pegar o mês atual
     hoje = timezone.now()

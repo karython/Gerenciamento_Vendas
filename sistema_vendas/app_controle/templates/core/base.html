@@ -70,5 +70,37 @@
 
     {% block scripts %}
     {% endblock %}
+
+    <!-- Keep-Alive Script - Mantém servidor ativo no Render -->
+    {% if not is_auth_page %}
+    <script>
+        (function() {
+            const KEEPALIVE_INTERVAL = 4 * 60 * 1000; // 4 minutos
+            const KEEPALIVE_URL = '/health/ping/';
+            
+            function keepAlive() {
+                fetch(KEEPALIVE_URL)
+                    .then(response => {
+                        if (response.ok) {
+                            console.log('[Keep-Alive] Servidor ativo ✓');
+                        } else {
+                            console.warn('[Keep-Alive] Resposta inesperada:', response.status);
+                        }
+                    })
+                    .catch(error => {
+                        console.error('[Keep-Alive] Erro:', error.message);
+                    });
+            }
+            
+            // Primeira execução após 30 segundos
+            setTimeout(keepAlive, 30000);
+            
+            // Executa a cada 4 minutos
+            setInterval(keepAlive, KEEPALIVE_INTERVAL);
+            
+            console.log('[Keep-Alive] Sistema iniciado (intervalo: 4 min)');
+        })();
+    </script>
+    {% endif %}
 </body>
 </html>

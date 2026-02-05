@@ -10,22 +10,34 @@ For the full list of settings and their values, see
 https://docs.djangoproject.com/en/5.2/ref/settings/
 """
 
+import os
 from pathlib import Path
+from dotenv import load_dotenv
+
+# Carregar variáveis de ambiente do arquivo .env
+load_dotenv()
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
 
+# ============================================
+# CONFIGURAÇÕES DE SEGURANÇA
+# ============================================
 
-# Quick-start development settings - unsuitable for production
-# See https://docs.djangoproject.com/en/5.2/howto/deployment/checklist/
+# SECRET_KEY: Deve ser carregado de variável de ambiente
+SECRET_KEY = os.getenv('SECRET_KEY')
 
-# SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = 'django-insecure-3q-&=6squefv$e)ikci3&wk6tb4mi_%9)39t%bvbn@8=3f9i#x'
+if not SECRET_KEY:
+    raise ValueError(
+        "SECRET_KEY não configurada! "
+        "Configure a variável de ambiente SECRET_KEY no arquivo .env"
+    )
 
-# SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = True
+# DEBUG: Deve ser False em produção
+DEBUG = os.getenv('DEBUG', 'False').lower() in ('true', '1', 't', 'yes')
 
-ALLOWED_HOSTS = []
+# ALLOWED_HOSTS: Configure os hosts permitidos separados por vírgula
+ALLOWED_HOSTS = os.getenv('ALLOWED_HOSTS', 'localhost,127.0.0.1').split(',')
 
 
 # Application definition
@@ -74,16 +86,26 @@ WSGI_APPLICATION = 'sistema_vendas.wsgi.application'
 # Database
 # https://docs.djangoproject.com/en/5.2/ref/settings/#databases
 
+# Database
+# https://docs.djangoproject.com/en/5.2/ref/settings/#databases
+
 DATABASES = {
     'default': {
-        'ENGINE': 'django.db.backends.mysql',
-        'NAME': 'u275872813_gen_estoque',
-        'USER': 'u275872813_admin_estoque',
-        'PASSWORD': 'GestaoEstoque25',
-        'HOST': 'srv1061.hstgr.io',
-        'PORT': '3306',
+        'ENGINE': os.getenv('DB_ENGINE', 'django.db.backends.mysql'),
+        'NAME': os.getenv('DB_NAME'),
+        'USER': os.getenv('DB_USER'),
+        'PASSWORD': os.getenv('DB_PASSWORD'),
+        'HOST': os.getenv('DB_HOST'),
+        'PORT': os.getenv('DB_PORT', '3306'),
     }
 }
+
+# Validar credenciais do banco
+if not all([os.getenv('DB_NAME'), os.getenv('DB_USER'), os.getenv('DB_HOST')]):
+    raise ValueError(
+        "Credenciais do banco de dados não configuradas! "
+        "Configure DB_NAME, DB_USER, DB_PASSWORD e DB_HOST no arquivo .env"
+    )
 
 
 # Password validation
@@ -110,7 +132,7 @@ AUTH_PASSWORD_VALIDATORS = [
 
 LANGUAGE_CODE = 'pt-br'
 
-TIME_ZONE = 'America/Sao_Paulo'
+TIME_ZONE = os.getenv('TIME_ZONE', 'America/Sao_Paulo')
 
 USE_I18N = True
 
@@ -136,26 +158,131 @@ STATIC_ROOT = BASE_DIR / "staticfiles"
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
 # ============================================
+# CONFIGURAÇÕES DE SEGURANÇA AVANÇADAS
+# ============================================
+
+# HTTPS e Cookies Seguros (Produção)
+if not DEBUG:
+    # Forçar HTTPS
+    SECURE_SSL_REDIRECT = os.getenv('SECURE_SSL_REDIRECT', 'True').lower() in ('true', '1', 't', 'yes')
+    
+    # Cookies apenas em HTTPS
+    SESSION_COOKIE_SECURE = os.getenv('SESSION_COOKIE_SECURE', 'True').lower() in ('true', '1', 't', 'yes')
+    CSRF_COOKIE_SECURE = os.getenv('CSRF_COOKIE_SECURE', 'True').lower() in ('true', '1', 't', 'yes')
+    
+    # HSTS (HTTP Strict Transport Security)
+    SECURE_HSTS_SECONDS = int(os.getenv('SECURE_HSTS_SECONDS', '31536000'))
+    SECURE_HSTS_INCLUDE_SUBDOMAINS = os.getenv('SECURE_HSTS_INCLUDE_SUBDOMAINS', 'True').lower() in ('true', '1', 't', 'yes')
+    SECURE_HSTS_PRELOAD = os.getenv('SECURE_HSTS_PRELOAD', 'True').lower() in ('true', '1', 't', 'yes')
+else:
+    # Em desenvolvimento, desabilitar HTTPS
+    SECURE_SSL_REDIRECT = False
+    SESSION_COOKIE_SECURE = False
+    CSRF_COOKIE_SECURE = False
+
+# Proteção contra X-Frame-Options (Clickjacking)
+X_FRAME_OPTIONS = 'DENY'
+
+# Proteção contra Content-Type Sniffing
+SECURE_CONTENT_TYPE_NO_SNIFF = True
+
+# Proteção XSS
+SECURE_BROWSER_XSS_FILTER = True
+
+# ============================================
 # CONFIGURAÇÕES DE SESSÃO
 # ============================================
 
 # Sessão expira ao fechar o navegador
 SESSION_EXPIRE_AT_BROWSER_CLOSE = True
 
-# Tempo de vida da sessão em segundos (opcional, caso queira limite de tempo também)
-# SESSION_COOKIE_AGE = 3600  # 1 hora (descomente se quiser)
+# Tempo de vida da sessão em segundos
+SESSION_COOKIE_AGE = int(os.getenv('SESSION_COOKIE_AGE', '3600'))  # 1 hora por padrão
 
 # Nome do cookie de sessão
 SESSION_COOKIE_NAME = 'sessionid'
 
-# Cookie de sessão acessível apenas via HTTP (segurança)
+# Cookie de sessão acessível apenas via HTTP (segurança contra XSS)
 SESSION_COOKIE_HTTPONLY = True
-
-# Cookie seguro apenas em HTTPS (descomente em produção)
-# SESSION_COOKIE_SECURE = True
 
 # Salvar sessão a cada requisição (mantém sessão ativa enquanto usar)
 SESSION_SAVE_EVERY_REQUEST = True
 
-# Backend de sessão (padrão é banco de dados)
+# Backend de sessão (banco de dados)
 SESSION_ENGINE = 'django.contrib.sessions.backends.db'
+
+# ============================================
+# CACHE (Para Rate Limiting)
+# ============================================
+
+CACHES = {
+    'default': {
+        'BACKEND': 'django.core.cache.backends.locmem.LocMemCache',
+        'LOCATION': 'unique-snowflake',
+    }
+}
+
+# Para produção, considere usar Redis:
+# CACHES = {
+#     'default': {
+#         'BACKEND': 'django_redis.cache.RedisCache',
+#         'LOCATION': 'redis://127.0.0.1:6379/1',
+#     }
+# }
+
+# ============================================
+# LOGGING (Auditoria de Segurança)
+# ============================================
+
+LOGGING = {
+    'version': 1,
+    'disable_existing_loggers': False,
+    'formatters': {
+        'verbose': {
+            'format': '{levelname} {asctime} {module} {process:d} {thread:d} {message}',
+            'style': '{',
+        },
+        'simple': {
+            'format': '{levelname} {asctime} {message}',
+            'style': '{',
+        },
+    },
+    'handlers': {
+        'file_security': {
+            'level': 'WARNING',
+            'class': 'logging.handlers.RotatingFileHandler',
+            'filename': BASE_DIR / 'logs' / 'security.log',
+            'maxBytes': 1024 * 1024 * 10,  # 10MB
+            'backupCount': 10,
+            'formatter': 'verbose',
+        },
+        'file_auth': {
+            'level': 'INFO',
+            'class': 'logging.handlers.RotatingFileHandler',
+            'filename': BASE_DIR / 'logs' / 'auth.log',
+            'maxBytes': 1024 * 1024 * 10,  # 10MB
+            'backupCount': 10,
+            'formatter': 'verbose',
+        },
+        'console': {
+            'class': 'logging.StreamHandler',
+            'formatter': 'simple',
+        },
+    },
+    'loggers': {
+        'django.security': {
+            'handlers': ['file_security', 'console'],
+            'level': 'INFO',
+            'propagate': False,
+        },
+        'seguranca': {
+            'handlers': ['file_auth', 'console'],
+            'level': 'INFO',
+            'propagate': False,
+        },
+    },
+}
+
+# Criar diretório de logs se não existir
+LOG_DIR = BASE_DIR / 'logs'
+LOG_DIR.mkdir(exist_ok=True)

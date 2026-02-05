@@ -49,22 +49,22 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
-    'app_controle'  # ✅ CORRIGIDO: sem prefixo sistema_vendas
+    'app_controle',
 ]
 
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
+    'whitenoise.middleware.WhiteNoiseMiddleware',  # ✅ WhiteNoise logo após SecurityMiddleware
     'django.contrib.sessions.middleware.SessionMiddleware',
-    'whitenoise.middleware.WhiteNoiseMiddleware',
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
-    'app_controle.middleware.SessionExpireMiddleware',  # ✅ CORRIGIDO
+    'app_controle.middleware.SessionExpireMiddleware',
 ]
 
-ROOT_URLCONF = 'sistema_vendas.urls'  # ✅ CORRIGIDO
+ROOT_URLCONF = 'sistema_vendas.urls'
 
 TEMPLATES = [
     {
@@ -73,6 +73,7 @@ TEMPLATES = [
         'APP_DIRS': True,
         'OPTIONS': {
             'context_processors': [
+                'django.template.context_processors.debug',
                 'django.template.context_processors.request',
                 'django.contrib.auth.context_processors.auth',
                 'django.contrib.messages.context_processors.messages',
@@ -81,7 +82,7 @@ TEMPLATES = [
     },
 ]
 
-WSGI_APPLICATION = 'sistema_vendas.wsgi.application'  # ✅ CORRIGIDO
+WSGI_APPLICATION = 'sistema_vendas.wsgi.application'
 
 
 # Database
@@ -137,17 +138,23 @@ USE_I18N = True
 USE_TZ = True
 
 
-# Static files (CSS, JavaScript, Images)
-# https://docs.djangoproject.com/en/5.2/howto/static-files/
+# ============================================
+# STATIC FILES (CSS, JavaScript, Images)
+# ============================================
 
-# URL prefix for static files. Use a leading slash so paths are absolute.
+# URL para acessar arquivos estáticos
 STATIC_URL = '/static/'
 
-# During development, also look for static files in the project-level `static/` folder
-STATICFILES_DIRS = [BASE_DIR / 'app_controle' / 'static']  # ✅ CORRIGIDO
+# Diretórios onde o Django procura arquivos estáticos durante desenvolvimento
+STATICFILES_DIRS = [
+    BASE_DIR / 'app_controle' / 'static',
+]
 
-# Optional: directory used by `collectstatic` in production
-STATIC_ROOT = BASE_DIR / "staticfiles"
+# Diretório onde collectstatic coleta todos os arquivos para produção
+STATIC_ROOT = BASE_DIR / 'staticfiles'
+
+# Configuração do WhiteNoise para comprimir e servir arquivos estáticos
+STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
 
 # Default primary key field type
 # https://docs.djangoproject.com/en/5.2/ref/settings/#default-auto-field
@@ -219,14 +226,6 @@ CACHES = {
     }
 }
 
-# Para produção, considere usar Redis:
-# CACHES = {
-#     'default': {
-#         'BACKEND': 'django_redis.cache.RedisCache',
-#         'LOCATION': 'redis://127.0.0.1:6379/1',
-#     }
-# }
-
 # ============================================
 # LOGGING (Auditoria de Segurança)
 # ============================================
@@ -283,17 +282,3 @@ LOGGING = {
 # Criar diretório de logs se não existir
 LOG_DIR = BASE_DIR / 'logs'
 LOG_DIR.mkdir(exist_ok=True)
-
-# Static files (CSS, JavaScript, Images)
-STATIC_URL = '/static/'
-
-# Diretórios onde o Django procura arquivos estáticos durante desenvolvimento
-STATICFILES_DIRS = [
-    BASE_DIR / 'app_controle' / 'static',
-]
-
-# Diretório onde collectstatic coleta todos os arquivos estáticos para produção
-STATIC_ROOT = BASE_DIR / 'staticfiles'
-
-# Configuração do WhiteNoise para servir arquivos estáticos em produção
-STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'

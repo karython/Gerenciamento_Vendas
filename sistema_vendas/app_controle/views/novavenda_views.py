@@ -110,7 +110,14 @@ def gerar_pdf_venda(request, venda_id):
         venda = Venda.objects.select_related(
             'CLIENTE_idCLIENTE',
             'PAGAMENTO_idPAGAMENTO'
-        ).prefetch_related('itens__PRODUTO_idPRODUTO').get(idVENDA=venda_id)
+        ).prefetch_related('itens__PRODUTO_idPRODUTO').only(
+            'idVENDA', 'DT_VENDA', 'QTD_VENDIDA', 'VLR_SUBTOTAL', 'DESCONTO', 'VLR_FRETE',
+            'VLR_TOTAL', 'OBSERVACAO', 'PARCELAMENTO',
+            'CLIENTE_idCLIENTE__NOME_CLIENTE', 'CLIENTE_idCLIENTE__TELEFONE', 'CLIENTE_idCLIENTE__EMAIL',
+            'CLIENTE_idCLIENTE__ENDERECO__LOGRADOURO', 'CLIENTE_idCLIENTE__ENDERECO__NUMERO',
+            'CLIENTE_idCLIENTE__ENDERECO__BAIRRO', 'CLIENTE_idCLIENTE__ENDERECO__CEP',
+            'PAGAMENTO_idPAGAMENTO__TP_PAGAMENTO'
+        ).get(idVENDA=venda_id)
         
         loja = AuthService.loja_logada(request)
         
@@ -261,7 +268,7 @@ def gerar_pdf_venda(request, venda_id):
             c.line(margem_esq, y - 15, margem_dir, y - 15)
             y -= altura_linha
         else:
-            for item in itens:
+            for item in itens.iterator():
                 # Tratamento seguro do nome do produto
                 produto_obj = item.PRODUTO_idPRODUTO
                 nome_produto = getattr(produto_obj, 'NOME_PRODUTO', getattr(produto_obj, 'DESCRICAO', str(produto_obj)))

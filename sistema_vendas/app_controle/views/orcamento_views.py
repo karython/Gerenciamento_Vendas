@@ -139,7 +139,14 @@ def gerar_pdf_orcamento(request, orcamento_id):
         orcamento = Orcamento.objects.select_related(
             'CLIENTE_idCLIENTE',
             'PAGAMENTO_idPAGAMENTO'
-        ).prefetch_related('itens__PRODUTO_idPRODUTO').get(idORCAMENTO=orcamento_id)
+        ).prefetch_related('itens__PRODUTO_idPRODUTO').only(
+            'idORCAMENTO', 'DT_ORCAMENTO', 'QTD_ITENS', 'VLR_SUBTOTAL', 'DESCONTO', 'VLR_FRETE',
+            'VLR_TOTAL', 'OBSERVACAO', 'PARCELAMENTO', 'STATUS',
+            'CLIENTE_idCLIENTE__NOME_CLIENTE', 'CLIENTE_idCLIENTE__TELEFONE', 'CLIENTE_idCLIENTE__EMAIL',
+            'CLIENTE_idCLIENTE__ENDERECO__LOGRADOURO', 'CLIENTE_idCLIENTE__ENDERECO__NUMERO',
+            'CLIENTE_idCLIENTE__ENDERECO__BAIRRO', 'CLIENTE_idCLIENTE__ENDERECO__CEP',
+            'PAGAMENTO_idPAGAMENTO__TP_PAGAMENTO'
+        ).get(idORCAMENTO=orcamento_id)
         
         loja = AuthService.loja_logada(request)
         
@@ -295,7 +302,7 @@ def gerar_pdf_orcamento(request, orcamento_id):
             c.line(margem_esq, y - 15, margem_dir, y - 15)
             y -= altura_linha
         else:
-            for item in itens:
+            for item in itens.iterator():
                 # Tratamento seguro do nome do produto
                 produto_obj = item.PRODUTO_idPRODUTO
                 # Tenta pegar NOME_PRODUTO, se falhar pega DESCRICAO, se falhar converte obj pra string
@@ -473,17 +480,22 @@ def converter_orcamento_venda(request, orcamento_id):
                 ORCAMENTO_ORIGEM=orcamento  # Rastrear origem
             )
             
-            # Copiar itens do orçamento para a venda
-            itens_orcamento = ItemOrcamento.objects.filter(ORCAMENTO_idORCAMENTO=orcamento)
+            # Copiar itens do orçamento para a venda (bulk create para melhor performance)
+            itens_orcamento = ItemOrcamento.objects.filter(ORCAMENTO_idORCAMENTO=orcamento).values(
+                'PRODUTO_idPRODUTO_id', 'QUANTIDADE', 'VLR_UNITARIO', 'VLR_TOTAL'
+            )
             
-            for item_orc in itens_orcamento:
-                ItemVenda.objects.create(
+            itens_venda = [
+                ItemVenda(
                     VENDA_idVENDA=venda,
-                    PRODUTO_idPRODUTO=item_orc.PRODUTO_idPRODUTO,
-                    QUANTIDADE=int(item_orc.QUANTIDADE),  # Converter Decimal para Int
-                    VLR_UNITARIO=item_orc.VLR_UNITARIO,
-                    VLR_TOTAL=item_orc.VLR_TOTAL
+                    PRODUTO_idPRODUTO_id=item['PRODUTO_idPRODUTO_id'],
+                    QUANTIDADE=int(item['QUANTIDADE']),
+                    VLR_UNITARIO=item['VLR_UNITARIO'],
+                    VLR_TOTAL=item['VLR_TOTAL']
                 )
+                for item in itens_orcamento
+            ]
+            ItemVenda.objects.bulk_create(itens_venda)
             
             # Atualizar status do orçamento
             orcamento.STATUS = 'CONVERTIDO'

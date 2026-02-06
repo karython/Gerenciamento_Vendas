@@ -9,10 +9,13 @@ class EstoqueService:
     @staticmethod
     def listar_estoque():
         """Lista todos os produtos com informações de estoque"""
-        estoques = Estoque.objects.select_related('PRODUTO_idPRODUTO').all()
+        estoques = Estoque.objects.select_related('PRODUTO_idPRODUTO').only(
+            'idESTOQUE', 'QTD_DISPONIVEL',
+            'PRODUTO_idPRODUTO__idPRODUTO', 'PRODUTO_idPRODUTO__DESCRICAO', 'PRODUTO_idPRODUTO__IOF', 'PRODUTO_idPRODUTO__VLR_UNIT'
+        )
         
         resultado = []
-        for estoque in estoques:
+        for estoque in estoques.iterator():
             produto = estoque.PRODUTO_idPRODUTO
             
             # IOF armazena o preço de custo, VLR_UNIT o preço de venda
@@ -121,8 +124,8 @@ class EstoqueService:
     def buscar_produto(produto_id):
         """Busca um produto específico com seu estoque"""
         try:
-            produto = Produto.objects.get(idPRODUTO=produto_id)
-            estoque = Estoque.objects.filter(PRODUTO_idPRODUTO=produto).first()
+            produto = Produto.objects.only('idPRODUTO', 'DESCRICAO', 'IOF', 'VLR_UNIT', 'TRACK_STOCK').get(idPRODUTO=produto_id)
+            estoque = Estoque.objects.filter(PRODUTO_idPRODUTO=produto).only('idESTOQUE', 'QTD_DISPONIVEL').first()
             
             return {
                 'produto': produto,

@@ -7,15 +7,17 @@ Detecta queries lentas, índices faltando e problemas de sessão
 import os
 import django
 import sys
+import time
 from django.db import connection, reset_queries
 from django.test.utils import override_settings
 import logging
+from collections import defaultdict
 
 # Configurar Django
 os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'sistema_vendas.settings')
 django.setup()
 
-from app_controle.models import Loja
+from app_controle.models import Loja, Venda, Orcamento, Cliente, Produto
 from django.contrib.sessions.models import Session
 
 # Habilitar logging SQL
@@ -26,6 +28,78 @@ logger.setLevel(logging.DEBUG)
 print("=" * 80)
 print("🔍 DIAGNÓSTICO DE PERFORMANCE - SISTEMA DE VENDAS")
 print("=" * 80)
+
+# ============================================================================
+# 0. ANALISAR TEMPO DE REQUISIÇÕES AO BANCO
+# ============================================================================
+print("\n[0] Analisando tempo de cada requisição ao banco...")
+print("-" * 80)
+
+with override_settings(DEBUG=True):
+    queries_analysis = []
+    
+    # Definir as queries de teste
+    test_queries = [
+        ("Loja.objects.all()", lambda: list(Loja.objects.all())),
+        ("Loja.objects.filter(ATIVO=True)", lambda: list(Loja.objects.filter(ATIVO=True))),
+        ("Venda.objects.all()", lambda: list(Venda.objects.all())),
+        ("Venda.objects.select_related('CLIENTE_idCLIENTE')", 
+         lambda: list(Venda.objects.select_related('CLIENTE_idCLIENTE').all())),
+        ("Orcamento.objects.all()", lambda: list(Orcamento.objects.all())),
+        ("Cliente.objects.all()", lambda: list(Cliente.objects.all())),
+        ("Produto.objects.all()", lambda: list(Produto.objects.all())),
+    ]
+    
+    print(f"\n{'Descrição':<50} {'Tempo (ms)':<15} {'Num Queries':<12}")
+    print("-" * 80)
+    
+    for description, query_func in test_queries:
+        reset_queries()
+        
+        start_time = time.time()
+        try:
+            query_func()
+            end_time = time.time()
+            
+            elapsed_ms = (end_time - start_time) * 1000
+            num_queries = len(connection.queries)
+            
+            print(f"{description:<50} {elapsed_ms:>10.2f} ms  {num_queries:>8} queries")
+            
+            queries_analysis.append({
+                'description': description,
+                'time_ms': elapsed_ms,
+                'num_queries': num_queries
+            })
+        except Exception as e:
+            print(f"{description:<50} ERRO: {str(e)[:30]}")
+    
+    # Análise detalhada de queries lentas
+    print("\n📊 Detalhes das requisições mais lentas:\n")
+    reset_queries()
+    
+    # Executar queries e capturar detalhes
+    all_queries_detail = []
+    
+    queries_to_detail = [
+        ("Loja (todas)", Loja.objects.all()),
+        ("Venda (todas)", Venda.objects.all()),
+        ("Venda (com select_related)", Venda.objects.select_related('CLIENTE_idCLIENTE')),
+    ]
+    
+    for label, queryset in queries_to_detail:
+        reset_queries()
+        list(queryset)
+        
+        if connection.queries:
+            total_time = sum(float(q.get('time', 0)) for q in connection.queries)
+            print(f"\n🔹 {label}:")
+            print(f"   Total: {total_time:.4f}s | Queries: {len(connection.queries)}")
+            
+            for idx, query in enumerate(connection.queries, 1):
+                query_time = float(query.get('time', 0))
+                sql = query['sql'][:100] + ("..." if len(query['sql']) > 100 else "")
+                print(f"   {idx}. [{query_time:.4f}s] {sql}")
 
 # ============================================================================
 # 1. VERIFICAR ÍNDICES NO BANCO

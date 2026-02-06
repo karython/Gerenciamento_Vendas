@@ -1,6 +1,7 @@
 # app_controle/views/vendas_views.py
 
 from django.shortcuts import render
+from django.core.paginator import Paginator
 from django.http import JsonResponse
 from datetime import datetime
 from ..services.venda_services import VendaService
@@ -24,36 +25,53 @@ def vendas(request):
     
     orcamentos_lista = []
     if tipo_filtro in ['orcamentos', 'todas']:
-        orcamentos = Orcamento.objects.select_related('CLIENTE_idCLIENTE', 'PAGAMENTO_idPAGAMENTO').all()
-        
+        # Selecionar apenas os campos necessários e buscar cliente/pagamento em join
+        orcamentos = Orcamento.objects.select_related('CLIENTE_idCLIENTE', 'PAGAMENTO_idPAGAMENTO').only(
+            'idORCAMENTO', 'DT_ORCAMENTO', 'VLR_TOTAL', 'STATUS',
+            'CLIENTE_idCLIENTE__NOME_CLIENTE', 'CLIENTE_idCLIENTE__TELEFONE',
+            'PAGAMENTO_idPAGAMENTO__TP_PAGAMENTO'
+        )
+
         # Filtro por nome do cliente
         if busca_nome:
             orcamentos = orcamentos.filter(CLIENTE_idCLIENTE__NOME_CLIENTE__icontains=busca_nome)
-        
+
         # Filtro por data
         if data_inicio:
             from django.utils.dateparse import parse_date
             dt_inicio = parse_date(data_inicio)
             if dt_inicio:
                 orcamentos = orcamentos.filter(DT_ORCAMENTO__date__gte=dt_inicio)
-        
+
         if data_fim:
             from django.utils.dateparse import parse_date
             dt_fim = parse_date(data_fim)
             if dt_fim:
                 orcamentos = orcamentos.filter(DT_ORCAMENTO__date__lte=dt_fim)
-        
-        orcamentos_lista = list(orcamentos)
+
+        # Mantemos queryset e aplicamos paginação mais abaixo
+        orcamentos_lista = orcamentos
     
     # Filtrar por tipo
     if tipo_filtro == 'vendas':
         orcamentos_lista = []
     elif tipo_filtro == 'orcamentos':
         vendas_lista = []
+
+    # Paginação para reduzir carga em listagens
+    page = request.GET.get('page', 1)
+    per_page = 25
+
+    # Paginator aceita queryset ou list; usamos de forma segura
+    paginator_vendas = Paginator(vendas_lista, per_page)
+    vendas_page = paginator_vendas.get_page(page)
+
+    paginator_orc = Paginator(orcamentos_lista, per_page)
+    orcamentos_page = paginator_orc.get_page(page)
     
     context = {
-        'vendas': vendas_lista,
-        'orcamentos': orcamentos_lista,
+        'vendas': vendas_page,
+        'orcamentos': orcamentos_page,
         'data_inicio': data_inicio,
         'data_fim': data_fim,
         'busca_nome': busca_nome,
@@ -97,16 +115,24 @@ def orcamentos(request):
     
     # Ordenar por data decrescente
     orcamentos_lista = orcamentos_lista.order_by('-DT_ORCAMENTO')
-    
+
+    # Paginação
+    page = request.GET.get('page', 1)
+    per_page = 25
+    paginator_orc = Paginator(orcamentos_lista, per_page)
+    orcamentos_page = paginator_orc.get_page(page)
+
     context = {
-        'orcamentos': orcamentos_lista,
+        'orcamentos': orcamentos_page,
         'data_inicio': data_inicio,
         'data_fim': data_fim,
         'busca_nome': busca_nome,
         'status_filtro': status_filtro,
-        'loja': loja
+        'loja': loja,
+        'paginator': paginator_orc,
+        'page_obj': orcamentos_page,
     }
-    
+
     return render(request, 'orcamentos.html', context)
 
 @AuthService.requer_login
@@ -115,25 +141,26 @@ def detalhes_venda(request, venda_id):
     Retorna os detalhes completos de uma venda incluindo os produtos
     """
     try:
-        venda = Venda.objects.select_related(
-            'CLIENTE_idCLIENTE', 
-            'PAGAMENTO_idPAGAMENTO'
+        venda = Venda.objects.select_related('CLIENTE_idCLIENTE', 'PAGAMENTO_idPAGAMENTO').only(
+            'idVENDA', 'DT_VENDA', 'VLR_TOTAL', 'OBSERVACAO',
+            'CLIENTE_idCLIENTE__NOME_CLIENTE', 'CLIENTE_idCLIENTE__TELEFONE',
+            'PAGAMENTO_idPAGAMENTO__TP_PAGAMENTO'
         ).get(idVENDA=venda_id)
-        
-        # Buscar os itens da venda
-        itens = ItemVenda.objects.filter(
-            VENDA_idVENDA=venda
-        ).select_related('PRODUTO_idPRODUTO')
-        
-        # Montar lista de produtos
+
+        # Buscar os itens da venda (campos mínimos)
+        itens = ItemVenda.objects.filter(VENDA_idVENDA=venda).select_related('PRODUTO_idPRODUTO').only(
+            'QTD_ITEM', 'VLR_ITEM', 'PRODUTO_idPRODUTO__NOME_PRODUTO'
+        )
+
+        # Montar lista de produtos sem instanciar muitos objetos ao mesmo tempo
         produtos = []
-        for item in itens:
+        for item in itens.iterator():
             produtos.append({
                 'nome': item.PRODUTO_idPRODUTO.NOME_PRODUTO,
                 'quantidade': item.QTD_ITEM,
                 'total': f"{item.VLR_ITEM:.2f}".replace('.', ',')
             })
-        
+
         # Montar dados da venda
         dados_venda = {
             'numero': f"V-{venda.idVENDA:05d}",
@@ -146,18 +173,18 @@ def detalhes_venda(request, venda_id):
             'observacao': venda.OBSERVACAO if getattr(venda, 'OBSERVACAO', None) else '',
             'urlPdf': f"/vendas/pdf/{venda.idVENDA}/"  # Ajuste conforme sua URL
         }
-        
+
         return JsonResponse({
             'success': True,
             'venda': dados_venda
         })
-        
+
     except Venda.DoesNotExist:
         return JsonResponse({
             'success': False,
             'message': 'Venda não encontrada'
         }, status=404)
-        
+
     except Exception as e:
         print(f"[VIEW] Erro ao buscar detalhes da venda: {str(e)}")
         import traceback

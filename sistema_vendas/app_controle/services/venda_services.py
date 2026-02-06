@@ -11,16 +11,19 @@ class VendaService:
     @staticmethod
     def listar_clientes():
         """Retorna lista de clientes para autocomplete"""
-        clientes = Cliente.objects.all().order_by('NOME_CLIENTE')
-        return [
-            {
-                'id': c.idCLIENTE,
-                'nome': c.NOME_CLIENTE,
-                'cpf': c.CPF,
-                'label': f"{c.NOME_CLIENTE} - CPF: {c.CPF}"
-            }
-            for c in clientes
-        ]
+        # Usar values() evita instanciar modelos completos
+        clientes_qs = Cliente.objects.order_by('NOME_CLIENTE').values('idCLIENTE', 'NOME_CLIENTE', 'CPF')
+        resultado = []
+        for c in clientes_qs:
+            nome = c.get('NOME_CLIENTE')
+            cpf = c.get('CPF')
+            resultado.append({
+                'id': c.get('idCLIENTE'),
+                'nome': nome,
+                'cpf': cpf,
+                'label': f"{nome} - CPF: {cpf}"
+            })
+        return resultado
     
     @staticmethod
     def listar_produtos():
@@ -32,7 +35,7 @@ class VendaService:
         # Produtos com estoque físico
         estoques = Estoque.objects.select_related('PRODUTO_idPRODUTO').filter(QTD_DISPONIVEL__gt=0)
         produtos_incluidos = set()
-        for estoque in estoques:
+        for estoque in estoques.iterator():
             produto = estoque.PRODUTO_idPRODUTO
             qtd_disponivel = estoque.QTD_DISPONIVEL
             produtos_incluidos.add(produto.idPRODUTO)
@@ -47,8 +50,9 @@ class VendaService:
             })
 
         # Produtos marcados como serviço (sem controle de estoque)
-        servicos = Produto.objects.filter(TRACK_STOCK=False)
-        for produto in servicos:
+        # Buscar apenas campos necessários para serviços (evita carregar campos extras)
+        servicos = Produto.objects.filter(TRACK_STOCK=False).only('idPRODUTO', 'DESCRICAO', 'VLR_UNIT')
+        for produto in servicos.iterator():
             if produto.idPRODUTO in produtos_incluidos:
                 continue
             resultado.append({
@@ -67,13 +71,10 @@ class VendaService:
     @staticmethod
     def listar_formas_pagamento():
         """Retorna formas de pagamento disponíveis"""
-        pagamentos = Pagamento.objects.all()
+        pagamentos_qs = Pagamento.objects.values('idPAGAMENTO', 'TP_PAGAMENTO')
         return [
-            {
-                'id': p.idPAGAMENTO,
-                'tipo': p.TP_PAGAMENTO
-            }
-            for p in pagamentos
+            {'id': p['idPAGAMENTO'], 'tipo': p['TP_PAGAMENTO']}
+            for p in pagamentos_qs
         ]
     
     @staticmethod

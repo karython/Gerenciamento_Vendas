@@ -1,5 +1,6 @@
 # app_controle/views/cliente_views.py
 from django.shortcuts import render, redirect, get_object_or_404
+from django.core.paginator import Paginator
 from django.contrib import messages
 from django.http import JsonResponse
 from ..services.cliente_services import ClienteService
@@ -10,11 +11,19 @@ from ..models import Cliente
 def listar_clientes(request):
     """Lista todos os clientes cadastrados - OTIMIZADO"""
     loja = AuthService.loja_logada(request)
-    clientes = ClienteService.listar_clientes()
-    
+    # Requer otimização: paginar e carregar apenas campos necessários
+    page = request.GET.get('page', 1)
+    per_page = 25
+
+    clientes_qs = Cliente.objects.only('idCLIENTE', 'NOME_CLIENTE', 'CPF', 'TELEFONE').order_by('NOME_CLIENTE')
+    paginator = Paginator(clientes_qs, per_page)
+    clientes_page = paginator.get_page(page)
+
     return render(request, 'clientes.html', {
-        'clientes': clientes,
-        'loja': loja
+        'clientes': clientes_page,
+        'loja': loja,
+        'paginator': paginator,
+        'page_obj': clientes_page,
     })
 
 @AuthService.requer_login

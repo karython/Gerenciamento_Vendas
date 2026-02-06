@@ -8,7 +8,8 @@ class ClienteService:
     @staticmethod
     def listar_clientes():
         """Retorna todos os clientes cadastrados"""
-        return Cliente.objects.all().order_by('NOME_CLIENTE')
+        # Retornar queryset para permitir paginação no nível da view
+        return Cliente.objects.order_by('NOME_CLIENTE')
     
     @staticmethod
     @transaction.atomic
@@ -145,8 +146,8 @@ class ClienteService:
     @staticmethod
     def verificar_vendas_cliente(cliente_id):
         """Verifica se o cliente possui vendas registradas"""
-        vendas = Venda.objects.filter(CLIENTE_idCLIENTE_id=cliente_id)
-        return vendas.count()
+        # Usar lookup por id direto para contar sem instanciar objetos
+        return Venda.objects.filter(CLIENTE_idCLIENTE_id=cliente_id).count()
     
     @staticmethod
     @transaction.atomic

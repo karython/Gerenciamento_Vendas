@@ -83,21 +83,27 @@ class OrcamentoService:
             
             print(f"[ORCAMENTO SERVICE] Orçamento #{orcamento.idORCAMENTO} criado")
             
-            # Criar itens do orçamento
+            # Criar itens do orçamento (buscar todos os produtos em uma única query)
+            produto_ids = [i['produto_id'] for i in dados.get('itens', [])]
+            produtos_map = {
+                p.idPRODUTO: p for p in Produto.objects.filter(idPRODUTO__in=produto_ids).only(
+                    'idPRODUTO', 'DESCRICAO', 'VLR_UNIT'
+                )
+            }
+
             for item_data in dados.get('itens', []):
-                try:
-                    produto = Produto.objects.get(idPRODUTO=item_data['produto_id'])
-                except Produto.DoesNotExist:
+                produto = produtos_map.get(item_data['produto_id'])
+                if not produto:
                     raise ValueError(f"Produto ID {item_data['produto_id']} não encontrado")
-                
+
                 quantidade = Decimal(str(item_data['quantidade']))
                 valor_unitario = Decimal(str(item_data['valor_unitario']))
                 valor_total = Decimal(str(item_data['valor_total']))
-                
+
                 # Validar quantidade
                 if quantidade <= 0:
                     raise ValueError(f'Quantidade inválida para o produto {produto.DESCRICAO}')
-                
+
                 # Criar item do orçamento
                 ItemOrcamento.objects.create(
                     ORCAMENTO_idORCAMENTO=orcamento,
@@ -106,7 +112,7 @@ class OrcamentoService:
                     VLR_UNITARIO=valor_unitario,
                     VLR_TOTAL=valor_total
                 )
-                
+
                 print(f"  ✅ Item adicionado: {produto.DESCRICAO} x{quantidade}")
             
             print(f"[ORCAMENTO SERVICE] Orçamento #{orcamento.idORCAMENTO} criado com {qtd_itens} itens")
@@ -132,7 +138,10 @@ class OrcamentoService:
         orcamentos = Orcamento.objects.select_related(
             'CLIENTE_idCLIENTE',
             'PAGAMENTO_idPAGAMENTO'
-        ).prefetch_related('itens__PRODUTO_idPRODUTO')
+        ).prefetch_related('itens__PRODUTO_idPRODUTO').only(
+            'idORCAMENTO', 'DT_ORCAMENTO', 'VLR_TOTAL', 'STATUS',
+            'CLIENTE_idCLIENTE__NOME_CLIENTE', 'PAGAMENTO_idPAGAMENTO__TP_PAGAMENTO'
+        )
         
         if not filtros:
             return orcamentos.order_by('-DT_ORCAMENTO')
@@ -173,10 +182,17 @@ class OrcamentoService:
             Orcamento: Objeto do orçamento
         """
         try:
+            from django.db.models import Prefetch
+            itens_qs = ItemOrcamento.objects.select_related('PRODUTO_idPRODUTO').only(
+                'QUANTIDADE', 'VLR_UNITARIO', 'VLR_TOTAL', 'PRODUTO_idPRODUTO__idPRODUTO', 'PRODUTO_idPRODUTO__DESCRICAO'
+            )
             return Orcamento.objects.select_related(
                 'CLIENTE_idCLIENTE',
                 'PAGAMENTO_idPAGAMENTO'
-            ).prefetch_related('itens__PRODUTO_idPRODUTO').get(idORCAMENTO=orcamento_id)
+            ).prefetch_related(Prefetch('itens', queryset=itens_qs)).only(
+                'idORCAMENTO', 'DT_ORCAMENTO', 'VLR_TOTAL', 'DESCONTO', 'VLR_FRETE', 'OBSERVACAO',
+                'CLIENTE_idCLIENTE__NOME_CLIENTE', 'PAGAMENTO_idPAGAMENTO__TP_PAGAMENTO'
+            ).get(idORCAMENTO=orcamento_id)
         except Orcamento.DoesNotExist:
             raise ValueError(f'Orçamento #{orcamento_id} não encontrado')
     
@@ -265,13 +281,17 @@ class OrcamentoService:
                 'itens': []
             }
             
-            # Adicionar itens
-            for item in orcamento.itens.all():
+            # Adicionar itens (usar values() para evitar instanciar modelos)
+            from ..models import ItemOrcamento as ItemOrc
+            itens_vals = ItemOrc.objects.filter(ORCAMENTO_idORCAMENTO=orcamento).values(
+                'PRODUTO_idPRODUTO__idPRODUTO', 'QUANTIDADE', 'VLR_UNITARIO', 'VLR_TOTAL'
+            )
+            for item in itens_vals:
                 dados_venda['itens'].append({
-                    'produto_id': item.PRODUTO_idPRODUTO.idPRODUTO,
-                    'quantidade': float(item.QUANTIDADE),
-                    'valor_unitario': float(item.VLR_UNITARIO),
-                    'valor_total': float(item.VLR_TOTAL)
+                    'produto_id': item.get('PRODUTO_idPRODUTO__idPRODUTO'),
+                    'quantidade': float(item.get('QUANTIDADE') or 0),
+                    'valor_unitario': float(item.get('VLR_UNITARIO') or 0),
+                    'valor_total': float(item.get('VLR_TOTAL') or 0)
                 })
             
             return dados_venda

@@ -38,23 +38,26 @@ def dashboard(request):
     total_estoque = Estoque.objects.aggregate(Sum('QTD_DISPONIVEL'))['QTD_DISPONIVEL__sum'] or 0
     
     # === DADOS PARA O GRÁFICO (últimos 30 dias) ===
-    # Buscar todas as vendas dos últimos 30 dias em memória e agrupar
-    vendas_30_dias_queryset = Venda.objects.filter(DT_VENDA__gte=data_30_dias).order_by('DT_VENDA')
-    
-    # Agrupar por data em Python (mais confiável com timezone-aware datetimes)
-    from collections import defaultdict
-    vendas_por_data_dict = defaultdict(int)
-    
-    for venda in vendas_30_dias_queryset:
-        if venda.DT_VENDA:
-            # Converter para timezone local e pegar só a data
-            data_local = venda.DT_VENDA.astimezone(timezone.get_current_timezone())
-            data_str = data_local.strftime('%d/%m')
-            vendas_por_data_dict[data_str] += 1
-    
-    # Converter para listas ordenadas
-    datas_vendas = sorted(vendas_por_data_dict.keys(), key=lambda x: tuple(map(int, x.split('/'))))
-    valores_vendas = [vendas_por_data_dict[data] for data in datas_vendas]
+    # Agrupar por data diretamente no banco para reduzir memória e objetos carregados
+    from django.db.models.functions import TruncDate
+
+    vendas_por_data_qs = (
+        Venda.objects
+        .filter(DT_VENDA__gte=data_30_dias)
+        .annotate(data=TruncDate('DT_VENDA'))
+        .values('data')
+        .annotate(count=Count('idVENDA'))
+        .order_by('data')
+    )
+
+    # Converter para listas ordenadas para o gráfico
+    datas_vendas = []
+    valores_vendas = []
+    for row in vendas_por_data_qs:
+        data = row.get('data')
+        if data:
+            datas_vendas.append(data.strftime('%d/%m'))
+            valores_vendas.append(row.get('count') or 0)
     
     print(f"[DASHBOARD] Datas vendas: {datas_vendas}")
     print(f"[DASHBOARD] Valores vendas: {valores_vendas}")

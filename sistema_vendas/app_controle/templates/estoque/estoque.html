@@ -1,0 +1,155 @@
+{% extends 'core/base.html' %}
+{% load static %}
+
+{% block title %}Estoque{% endblock %}
+
+{% block dashboard_content %}
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+<link rel="stylesheet" href="{% static 'css/estoque.css' %}">
+
+<div class="header">
+    <h1>Estoque</h1>
+    <div>
+        <button id="btn-lancar-reposicao" class="btn btn-secondary" style="margin-right: 10px;">
+            <i class="fas fa-plus-circle"></i> Lançar Reposição
+        </button>
+        <button id="btn-cadastrar-produto" class="btn btn-primary">
+            <i class="fas fa-box"></i> Cadastrar Novo Produto
+        </button>
+    </div>
+</div>
+
+<div class="card">
+    <table class="tabela">
+        <thead>
+            <tr>
+                <th>Nome do Produto</th>
+                <th>Preço Custo</th>
+                <th>Preço Venda</th>
+                <th>Qtd. Atual</th>
+                <th>Lucro/Unid.</th>
+                <th style="text-align: center;">Ações</th>
+            </tr>
+        </thead>
+        <tbody id="tabela-estoque">
+            {% for item in estoques %}
+            <tr data-produto-id="{{ item.produto_id }}">
+                <td>{{ item.nome }}</td>
+                <td>R$ {{ item.preco_custo|floatformat:2 }}</td>
+                <td>R$ {{ item.preco_venda|floatformat:2 }}</td>
+                <td class="quantidade">{{ item.quantidade }}</td>
+                <td>R$ {{ item.lucro_unitario|floatformat:2 }}</td>
+                <td style="text-align: center;">
+                    <a href="#" class="btn-acao btn-editar" data-id="{{ item.produto_id }}" title="Editar Produto">
+                        <i class="fas fa-edit"></i>
+                    </a>
+                    <a href="#" class="btn-acao btn-deletar" data-id="{{ item.produto_id }}" title="Deletar Produto">
+                        <i class="fas fa-trash-alt"></i>
+                    </a>
+                </td>
+            </tr>
+            {% empty %}
+            <tr id="linha-vazia">
+                <td colspan="6" style="text-align: center; padding: 30px;">Nenhum produto cadastrado</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+
+<div id="modal-cadastrar" class="modal">
+    <div class="modal-content">
+        <span class="close" data-modal="cadastrar">&times;</span>
+        <h2>Cadastrar Novo Produto</h2>
+        <form id="form-cadastrar-produto">
+            {% csrf_token %}
+            <div class="form-group">
+                <label for="nome-produto">Nome do Produto *</label>
+                <input type="text" id="nome-produto" class="form-control" required>
+            </div>
+            <div class="form-group">
+                <label>
+                    <input type="checkbox" id="is-servico"> É um serviço
+                </label>
+            </div>
+            <div class="form-row">
+                <div class="form-group">
+                    <label for="preco-custo">Preço de Custo</label>
+                    <input type="number" id="preco-custo" class="form-control" step="0.01" min="0" value="0">
+                </div>
+                <div class="form-group">
+                    <label for="preco-venda">Preço de Venda *</label>
+                    <input type="number" id="preco-venda" class="form-control" step="0.01" min="0" required>
+                </div>
+            </div>
+            <div class="form-group">
+                <label for="quantidade-inicial">Quantidade Inicial *</label>
+                <input type="number" id="quantidade-inicial" class="form-control" min="0" value="0" required>
+            </div>
+            <button type="submit" class="btn btn-primary">Salvar Produto</button>
+        </form>
+    </div>
+</div>
+
+<div id="modal-editar" class="modal">
+    <div class="modal-content">
+        <span class="close" data-modal="editar">&times;</span>
+        <h2>Editar Produto</h2>
+        <form id="form-editar-produto">
+            {% csrf_token %}
+            <input type="hidden" id="edit-produto-id">
+            <div class="form-group">
+                <label for="edit-nome-produto">Nome do Produto *</label>
+                <input type="text" id="edit-nome-produto" class="form-control" required>
+            </div>
+            <div class="form-row">
+                <div class="form-group">
+                    <label for="edit-preco-custo">Preço de Custo</label>
+                    <input type="number" id="edit-preco-custo" class="form-control" step="0.01" min="0">
+                </div>
+                <div class="form-group">
+                    <label for="edit-preco-venda">Preço de Venda *</label>
+                    <input type="number" id="edit-preco-venda" class="form-control" step="0.01" min="0" required>
+                </div>
+            </div>
+            <div class="form-group">
+                <label for="edit-quantidade">Quantidade Atual *</label>
+                <input type="number" id="edit-quantidade" class="form-control" min="0" required>
+            </div>
+            <div class="form-group">
+                <label>
+                    <input type="checkbox" id="edit-is-servico"> É um serviço
+                </label>
+            </div>
+            <button type="submit" class="btn btn-primary">Salvar Alterações</button>
+        </form>
+    </div>
+</div>
+
+<div id="modal-reposicao" class="modal">
+    <div class="modal-content">
+        <span class="close" data-modal="reposicao">&times;</span>
+        <h2>Lançar Reposição</h2>
+        <form id="form-reposicao">
+            {% csrf_token %}
+            <div class="form-group">
+                <label for="produto-reposicao">Selecione o Produto *</label>
+                <select id="produto-reposicao" class="form-control" required>
+                    <option value="">Selecione...</option>
+                    {% for item in estoques %}
+                    <option value="{{ item.produto_id }}">{{ item.nome }} (Atual: {{ item.quantidade }})</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="form-group">
+                <label for="quantidade-reposicao">Quantidade a Adicionar *</label>
+                <input type="number" id="quantidade-reposicao" class="form-control" min="1" required>
+            </div>
+            <button type="submit" class="btn btn-success">Adicionar ao Estoque</button>
+        </form>
+    </div>
+</div>
+
+<script src="{% static 'js/estoque.js' %}"></script>
+
+{% endblock %}

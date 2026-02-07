@@ -1,0 +1,245 @@
+/* ============================================
+   ORCAMENTOS.CSS - Estilos para página de orçamentos
+   ============================================ */
+
+.btn-acao {
+    border: none;
+    background: none;
+    cursor: pointer;
+    font-size: 1.1rem;
+    margin: 0 6px;
+    transition: transform 0.2s, color 0.2s;
+    display: inline-block;
+}
+.btn-acao:hover { transform: scale(1.15); }
+
+.btn-detalhes { color: #007bff; }
+.btn-detalhes:hover { color: #0056b3; }
+
+.btn-pdf { color: #6c757d; }
+.btn-pdf:hover { color: #495057; }
+
+.btn-converter { color: #28a745; }
+.btn-converter:hover { color: #1e7e34; }
+
+.btn-deletar { color: #dc3545; }
+.btn-deletar:hover { color: #a71d2a; }
+
+.status-select {
+    padding: 6px 10px;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    font-size: 14px;
+    background: white;
+    cursor: pointer;
+    min-width: 120px;
+}
+
+.header-vendas { 
+    display: flex; 
+    justify-content: space-between; 
+    align-items: center; 
+    margin-bottom: 20px; 
+    flex-wrap: wrap; 
+    gap: 15px; 
+}
+
+.header-vendas h1 { 
+    font-size: 24px; 
+    color: #333; 
+    margin: 0; 
+}
+
+.header-right, .filtro-form { 
+    display: flex; 
+    align-items: center; 
+    gap: 10px; 
+    flex-wrap: wrap; 
+}
+
+.filtro-group { 
+    display: flex; 
+    flex-direction: column; 
+    gap: 5px; 
+}
+
+.filtro-group label { 
+    font-size: 12px; 
+    color: #666; 
+    font-weight: 500; 
+}
+
+.input-data, .input-busca { 
+    padding: 8px 12px; 
+    border: 1px solid #ccc; 
+    border-radius: 4px; 
+    font-size: 14px; 
+}
+
+.input-busca { min-width: 200px; }
+
+.btn-filtrar, .btn-limpar, .btn-download { 
+    padding: 8px 16px; 
+    border-radius: 4px; 
+    border: none; 
+    cursor: pointer; 
+    color: white; 
+    font-weight: 500; 
+    font-size: 14px; 
+}
+
+.btn-filtrar, .btn-download { 
+    background: #007bff; 
+    margin-top: 22px; 
+}
+
+.btn-limpar { 
+    background: #6c757d; 
+    margin-top: 22px; 
+    text-decoration: none; 
+    display: inline-block; 
+    text-align: center;
+}
+
+.btn-download:hover { 
+    background: #0056b3; 
+    text-decoration: none; 
+}
+
+.card-vendas { 
+    background: white; 
+    border-radius: 8px; 
+    padding: 20px; 
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1); 
+}
+
+.tabela-vendas { 
+    width: 100%; 
+    border-collapse: collapse; 
+}
+
+.tabela-vendas thead th { 
+    background: #f8f9fa; 
+    padding: 12px; 
+    text-align: left; 
+    font-weight: 600; 
+    border-bottom: 2px solid #dee2e6; 
+    color: #495057; 
+}
+
+.tabela-vendas tbody td { 
+    padding: 12px; 
+    border-bottom: 1px solid #dee2e6; 
+    vertical-align: middle; 
+}
+
+.tabela-vendas tbody tr:hover { 
+    background: #f8f9fa; 
+}
+
+.badge { 
+    padding: 5px 10px; 
+    border-radius: 4px; 
+    font-size: 0.9em; 
+}
+
+.badge-warning { background: #fff3cd; color: #856404; }
+.badge-success { background: #d4edda; color: #155724; }
+.badge-danger { background: #f8d7da; color: #721c24; }
+.badge-info { background: #d1ecf1; color: #0c5460; }
+
+.modal-overlay { 
+    position: fixed; 
+    top: 0; 
+    left: 0; 
+    width: 100%; 
+    height: 100%; 
+    background: rgba(0, 0, 0, 0.5); 
+    display: flex; 
+    justify-content: center; 
+    align-items: center; 
+    z-index: 1000; 
+}
+
+.modal-box { 
+    background: white; 
+    border-radius: 8px; 
+    width: 90%; 
+    max-width: 600px; 
+    max-height: 80vh; 
+    overflow-y: auto; 
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1); 
+}
+
+.modal-header { 
+    display: flex; 
+    justify-content: space-between; 
+    align-items: center; 
+    padding: 20px; 
+    border-bottom: 1px solid #dee2e6; 
+}
+
+.btn-fechar { 
+    background: none; 
+    border: none; 
+    font-size: 28px; 
+    color: #999; 
+    cursor: pointer; 
+}
+
+.modal-body { padding: 20px; }
+
+.detalhes-venda p { margin: 5px 0; }
+
+.detalhes-venda hr { 
+    margin: 15px 0; 
+    border: 0; 
+    border-top: 1px solid #eee; 
+}
+
+.barra-selecao { 
+    background: #fff3cd; 
+    border: 1px solid #ffc107; 
+    border-radius: 6px; 
+    padding: 12px 16px; 
+    margin-bottom: 15px; 
+    display: flex; 
+    justify-content: space-between; 
+    align-items: center; 
+}
+
+.selecao-acoes { 
+    display: flex; 
+    gap: 10px; 
+}
+
+.btn-deletar-multiplas { 
+    background: #dc3545; 
+    color: white; 
+    border: none; 
+    padding: 8px 16px; 
+    border-radius: 4px; 
+    cursor: pointer; 
+}
+
+.btn-cancelar { 
+    background: #6c757d; 
+    color: white; 
+    border: none; 
+    padding: 8px 16px; 
+    border-radius: 4px; 
+    cursor: pointer; 
+}
+
+.btn-converter-confirmar {
+    background-color: #28a745;
+    color: white;
+    border: none;
+    padding: 8px 16px;
+    border-radius: 4px;
+    cursor: pointer;
+}
+
+.btn-converter-confirmar:hover {
+    background-color: #218838;
+}

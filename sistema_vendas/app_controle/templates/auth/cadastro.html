@@ -5,8 +5,59 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Cadastro - Sistema de Vendas</title>
     {% load static %}
-    <link rel="stylesheet" href="{% static '/css/style.css' %}">
+    <link rel="stylesheet" href="{% static 'css/style.css' %}">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <script src="{% static 'js/loader.js' %}"></script>
+    <style>
+        .password-container {
+            position: relative;
+            width: 100%;
+        }
+        
+        .password-toggle {
+            position: absolute;
+            right: 15px;
+            top: 50%;
+            transform: translateY(-50%);
+            cursor: pointer;
+            color: #999;
+            font-size: 18px;
+            transition: color 0.3s;
+            z-index: 10;
+        }
+        
+        .password-toggle:hover {
+            color: #333;
+        }
+        
+        .cadastro-form-group .password-container input {
+            padding-right: 45px;
+        }
+        
+        .password-strength {
+            margin-top: 8px;
+            font-size: 12px;
+        }
+        
+        .strength-bar {
+            height: 4px;
+            width: 100%;
+            background: #e0e0e0;
+            border-radius: 2px;
+            margin-top: 5px;
+            overflow: hidden;
+        }
+        
+        .strength-bar-fill {
+            height: 100%;
+            width: 0%;
+            transition: width 0.3s, background-color 0.3s;
+        }
+        
+        .strength-weak { background-color: #dc3545; width: 33%; }
+        .strength-medium { background-color: #ffc107; width: 66%; }
+        .strength-strong { background-color: #28a745; width: 100%; }
+    </style>
 </head>
 <body class="cadastro-body">
     <div class="cadastro-container">
@@ -33,10 +84,10 @@
                     <div class="cadastro-form-group">
                         <label>Nome da Loja <span class="cadastro-required">*</span></label>
                         <input type="text" 
-                               name="nome_loja" 
+                               name="nome" 
                                required 
                                maxlength="200"
-                               value="{{ dados.nome_loja|default:'' }}"
+                               value="{{ dados.nome|default:'' }}"
                                placeholder="Ex: Loja do João">
                     </div>
 
@@ -82,23 +133,46 @@
 
                     <div class="cadastro-form-group">
                         <label>Senha <span class="cadastro-required">*</span></label>
-                        <input type="password" 
-                               name="senha" 
-                               required 
-                               minlength="6"
-                               maxlength="50"
-                               placeholder="Mínimo 6 caracteres">
+                        <div class="password-container">
+                            <input type="password" 
+                                   name="senha" 
+                                   id="senha"
+                                   required 
+                                   minlength="6"
+                                   maxlength="50"
+                                   placeholder="Mínimo 6 caracteres"
+                                   oninput="checkPasswordStrength()">
+                            <i class="fas fa-eye password-toggle" 
+                               id="toggle-senha"
+                               onclick="togglePassword('senha', 'toggle-senha')"
+                               title="Mostrar senha"></i>
+                        </div>
+                        <div class="password-strength" id="password-strength" style="display: none;">
+                            <div class="strength-bar">
+                                <div class="strength-bar-fill" id="strength-bar-fill"></div>
+                            </div>
+                            <small id="strength-text"></small>
+                        </div>
                         <small>A senha deve ter no mínimo 6 caracteres</small>
                     </div>
 
                     <div class="cadastro-form-group">
                         <label>Confirmar Senha <span class="cadastro-required">*</span></label>
-                        <input type="password" 
-                               name="senha_confirmacao" 
-                               required 
-                               minlength="6"
-                               maxlength="50"
-                               placeholder="Digite a senha novamente">
+                        <div class="password-container">
+                            <input type="password" 
+                                   name="senha_confirmacao" 
+                                   id="senha_confirmacao"
+                                   required 
+                                   minlength="6"
+                                   maxlength="50"
+                                   placeholder="Digite a senha novamente"
+                                   oninput="checkPasswordMatch()">
+                            <i class="fas fa-eye password-toggle" 
+                               id="toggle-senha-confirmacao"
+                               onclick="togglePassword('senha_confirmacao', 'toggle-senha-confirmacao')"
+                               title="Mostrar senha"></i>
+                        </div>
+                        <small id="password-match-message"></small>
                     </div>
 
                     <button type="submit" class="cadastro-btn cadastro-btn-primary">
@@ -116,6 +190,88 @@
     </div>
 
     <script>
+        // Toggle de senha (mostrar/ocultar)
+        function togglePassword(inputId, iconId) {
+            const input = document.getElementById(inputId);
+            const icon = document.getElementById(iconId);
+            
+            if (input.type === 'password') {
+                input.type = 'text';
+                icon.classList.remove('fa-eye');
+                icon.classList.add('fa-eye-slash');
+                icon.setAttribute('title', 'Ocultar senha');
+            } else {
+                input.type = 'password';
+                icon.classList.remove('fa-eye-slash');
+                icon.classList.add('fa-eye');
+                icon.setAttribute('title', 'Mostrar senha');
+            }
+        }
+
+        // Verificar força da senha
+        function checkPasswordStrength() {
+            const senha = document.getElementById('senha').value;
+            const strengthDiv = document.getElementById('password-strength');
+            const strengthBar = document.getElementById('strength-bar-fill');
+            const strengthText = document.getElementById('strength-text');
+            
+            if (senha.length === 0) {
+                strengthDiv.style.display = 'none';
+                return;
+            }
+            
+            strengthDiv.style.display = 'block';
+            
+            let strength = 0;
+            
+            // Critérios de força
+            if (senha.length >= 6) strength++;
+            if (senha.length >= 10) strength++;
+            if (/[a-z]/.test(senha) && /[A-Z]/.test(senha)) strength++;
+            if (/\d/.test(senha)) strength++;
+            if (/[^a-zA-Z0-9]/.test(senha)) strength++;
+            
+            // Atualizar barra
+            strengthBar.className = 'strength-bar-fill';
+            
+            if (strength <= 2) {
+                strengthBar.classList.add('strength-weak');
+                strengthText.textContent = 'Fraca';
+                strengthText.style.color = '#dc3545';
+            } else if (strength <= 3) {
+                strengthBar.classList.add('strength-medium');
+                strengthText.textContent = 'Média';
+                strengthText.style.color = '#ffc107';
+            } else {
+                strengthBar.classList.add('strength-strong');
+                strengthText.textContent = 'Forte';
+                strengthText.style.color = '#28a745';
+            }
+            
+            // Verificar match quando há confirmação
+            checkPasswordMatch();
+        }
+
+        // Verificar se as senhas coincidem
+        function checkPasswordMatch() {
+            const senha = document.getElementById('senha').value;
+            const confirmacao = document.getElementById('senha_confirmacao').value;
+            const message = document.getElementById('password-match-message');
+            
+            if (confirmacao.length === 0) {
+                message.textContent = '';
+                return;
+            }
+            
+            if (senha === confirmacao) {
+                message.textContent = '✓ As senhas coincidem';
+                message.style.color = '#28a745';
+            } else {
+                message.textContent = '✗ As senhas não coincidem';
+                message.style.color = '#dc3545';
+            }
+        }
+
         // Máscara para CNPJ
         document.getElementById('cnpj').addEventListener('input', function(e) {
             let value = e.target.value.replace(/\D/g, '');
@@ -155,6 +311,12 @@
             if (senha !== confirmacao) {
                 e.preventDefault();
                 alert('❌ As senhas não coincidem!');
+                return;
+            }
+
+            if (senha.length < 6) {
+                e.preventDefault();
+                alert('❌ A senha deve ter no mínimo 6 caracteres!');
                 return;
             }
 

@@ -1,124 +1,131 @@
 # app_controle/services/orcamento_services.py
+"""
+Service de gerenciamento de orçamentos
+"""
+
 from django.db import transaction
-from django.db.models import Q
-from ..models import Orcamento, ItemOrcamento, Cliente, Pagamento, Produto
+from django.db.models import Q, Count, Sum
 from decimal import Decimal
+from ..models import Orcamento, ItemOrcamento, Cliente, FormaPagamento, Produto
 
 
 class OrcamentoService:
-    """Service para gerenciar orçamentos"""
     
     @staticmethod
+    @transaction.atomic
     def criar_orcamento(dados):
         """
         Cria um novo orçamento sem dar baixa no estoque
         
         Args:
-            dados (dict): Dados do orçamento contendo:
-                - cliente_id: ID do cliente
-                - forma_pagamento_id: ID da forma de pagamento
-                - itens: Lista de itens com produto_id, quantidade, valor_unitario, valor_total
-                - subtotal: Valor subtotal
-                - desconto: Valor do desconto
-                - total: Valor total
+            dados (dict): Dados do orçamento
+                - cliente_id (int): ID do cliente
+                - forma_pagamento_id (int): ID da forma de pagamento
+                - itens (list): Lista de itens
+                - subtotal (Decimal): Subtotal
+                - desconto (Decimal): Desconto
+                - frete (Decimal): Frete
+                - total (Decimal): Total
+                - observacao (str, opcional): Observações
+                - parcelamento (str, opcional): Parcelamento
         
         Returns:
             Orcamento: Objeto do orçamento criado
+        
+        Raises:
+            ValueError: Se dados inválidos
         """
-        with transaction.atomic():
-            # Validar cliente
-            try:
-                cliente = Cliente.objects.get(idCLIENTE=dados['cliente_id'])
-            except Cliente.DoesNotExist:
-                raise ValueError('Cliente não encontrado')
-            
-            # Validar forma de pagamento
-            try:
-                pagamento = Pagamento.objects.get(idPAGAMENTO=dados['forma_pagamento_id'])
-            except Pagamento.DoesNotExist:
-                raise ValueError('Forma de pagamento não encontrada')
-            
-            # Validar itens
-            if not dados.get('itens') or len(dados['itens']) == 0:
-                raise ValueError('É necessário adicionar pelo menos um item ao orçamento')
-            
-            # Extrair valores
-            vlr_subtotal = Decimal(str(dados.get('subtotal', 0)))
-            desconto = Decimal(str(dados.get('desconto', 0)))
-            vlr_frete = Decimal(str(dados.get('frete', 0)))
-            vlr_total = Decimal(str(dados.get('total', 0)))
-            qtd_itens = len(dados.get('itens', []))
-            observacao = dados.get('observacao', '')
-            if observacao is None:
-                observacao = ''
-            if len(str(observacao)) > 3000:
-                raise ValueError('O campo de observação não pode ter mais que 3000 caracteres')
-            
-            # Validar desconto e frete
-            if desconto < 0:
-                raise ValueError('O desconto não pode ser negativo')
-            
-            if desconto > vlr_subtotal:
-                raise ValueError('O desconto não pode ser maior que o subtotal')
+        # Validar cliente
+        try:
+            # ✅ Usar novo nome
+            cliente = Cliente.objects.get(id=dados['cliente_id'])  # ✅ Novo nome
+        except Cliente.DoesNotExist:
+            raise ValueError('Cliente não encontrado')
+        
+        # Validar forma de pagamento
+        try:
+            # ✅ Usar novo nome
+            pagamento = FormaPagamento.objects.get(id=dados['forma_pagamento_id'])  # ✅ Novo nome
+        except FormaPagamento.DoesNotExist:
+            raise ValueError('Forma de pagamento não encontrada')
+        
+        # Validar itens
+        if not dados.get('itens') or len(dados['itens']) == 0:
+            raise ValueError('É necessário adicionar pelo menos um item ao orçamento')
+        
+        # Extrair valores
+        vlr_subtotal = Decimal(str(dados.get('subtotal', 0)))
+        desconto = Decimal(str(dados.get('desconto', 0)))
+        vlr_frete = Decimal(str(dados.get('frete', 0)))
+        vlr_total = Decimal(str(dados.get('total', 0)))
+        qtd_itens = len(dados.get('itens', []))
+        
+        # Observação
+        observacao = dados.get('observacao', '')
+        if observacao is None:
+            observacao = ''
+        if len(str(observacao)) > 3000:
+            raise ValueError('Observação não pode ter mais que 3000 caracteres')
+        
+        # Validações
+        if desconto < 0:
+            raise ValueError('O desconto não pode ser negativo')
+        
+        if desconto > vlr_subtotal:
+            raise ValueError('O desconto não pode ser maior que o subtotal')
 
-            if vlr_frete < 0:
-                raise ValueError('O valor do frete não pode ser negativo')
-            
-            # Pegar parcelamento se informado
-            parcelamento = dados.get('parcelamento', '')
-            
-            # Criar orçamento
-            orcamento = Orcamento.objects.create(
-                CLIENTE_idCLIENTE=cliente,
-                PAGAMENTO_idPAGAMENTO=pagamento,
-                QTD_ITENS=qtd_itens,
-                VLR_SUBTOTAL=vlr_subtotal,
-                DESCONTO=desconto,
-                VLR_FRETE=vlr_frete,
-                OBSERVACAO=observacao,
-                PARCELAMENTO=parcelamento,
-                VLR_TOTAL=vlr_total,
-                STATUS='PENDENTE'
+        if vlr_frete < 0:
+            raise ValueError('O valor do frete não pode ser negativo')
+        
+        parcelamento = dados.get('parcelamento', '')
+        
+        # ✅ Criar orçamento com novos nomes
+        orcamento = Orcamento.objects.create(
+            cliente=cliente,  # ✅ Novo nome
+            forma_pagamento=pagamento,  # ✅ Novo nome
+            subtotal=vlr_subtotal,  # ✅ Novo nome
+            desconto=desconto,  # ✅ Novo nome
+            frete=vlr_frete,  # ✅ Novo nome
+            observacao=observacao,  # ✅ Novo nome
+            parcelamento=parcelamento,  # ✅ Novo nome
+            total=vlr_total,  # ✅ Novo nome
+            status='PENDENTE'  # ✅ Novo nome
+        )
+        
+        # Criar itens do orçamento (buscar produtos em uma query)
+        produto_ids = [i['produto_id'] for i in dados.get('itens', [])]
+        # ✅ Usar novos nomes
+        produtos_map = {
+            p.id: p for p in Produto.objects.filter(id__in=produto_ids).only(
+                'id', 'descricao', 'preco_unitario'  # ✅ Novos nomes
             )
-            
-            print(f"[ORCAMENTO SERVICE] Orçamento #{orcamento.idORCAMENTO} criado")
-            
-            # Criar itens do orçamento (buscar todos os produtos em uma única query)
-            produto_ids = [i['produto_id'] for i in dados.get('itens', [])]
-            produtos_map = {
-                p.idPRODUTO: p for p in Produto.objects.filter(idPRODUTO__in=produto_ids).only(
-                    'idPRODUTO', 'DESCRICAO', 'VLR_UNIT'
-                )
-            }
+        }
 
-            for item_data in dados.get('itens', []):
-                produto = produtos_map.get(item_data['produto_id'])
-                if not produto:
-                    raise ValueError(f"Produto ID {item_data['produto_id']} não encontrado")
+        for item_data in dados.get('itens', []):
+            produto = produtos_map.get(item_data['produto_id'])
+            if not produto:
+                raise ValueError(f"Produto ID {item_data['produto_id']} não encontrado")
 
-                quantidade = Decimal(str(item_data['quantidade']))
-                valor_unitario = Decimal(str(item_data['valor_unitario']))
-                valor_total = Decimal(str(item_data['valor_total']))
+            quantidade = Decimal(str(item_data['quantidade']))
+            valor_unitario = Decimal(str(item_data['valor_unitario']))
+            valor_total = Decimal(str(item_data['valor_total']))
 
-                # Validar quantidade
-                if quantidade <= 0:
-                    raise ValueError(f'Quantidade inválida para o produto {produto.DESCRICAO}')
-
-                # Criar item do orçamento
-                ItemOrcamento.objects.create(
-                    ORCAMENTO_idORCAMENTO=orcamento,
-                    PRODUTO_idPRODUTO=produto,
-                    QUANTIDADE=quantidade,
-                    VLR_UNITARIO=valor_unitario,
-                    VLR_TOTAL=valor_total
+            # Validar quantidade
+            if quantidade <= 0:
+                raise ValueError(
+                    f'Quantidade inválida para o produto {produto.descricao}'  # ✅ Novo nome
                 )
 
-                print(f"  ✅ Item adicionado: {produto.DESCRICAO} x{quantidade}")
-            
-            print(f"[ORCAMENTO SERVICE] Orçamento #{orcamento.idORCAMENTO} criado com {qtd_itens} itens")
-            print(f"[ORCAMENTO SERVICE] Valor total: R$ {vlr_total}")
-            
-            return orcamento
+            # ✅ Criar item do orçamento com novos nomes
+            ItemOrcamento.objects.create(
+                orcamento=orcamento,  # ✅ Novo nome
+                produto=produto,  # ✅ Novo nome
+                quantidade=quantidade,  # ✅ Novo nome
+                preco_unitario=valor_unitario,  # ✅ Novo nome
+                total=valor_total  # ✅ Novo nome
+            )
+        
+        return orcamento
     
     @staticmethod
     def listar_orcamentos(filtros=None):
@@ -126,49 +133,56 @@ class OrcamentoService:
         Lista orçamentos com filtros opcionais
         
         Args:
-            filtros (dict): Dicionário com filtros opcionais:
-                - cliente_nome: Nome do cliente
-                - data_inicio: Data inicial
-                - data_fim: Data final
-                - status: Status do orçamento
+            filtros (dict): Filtros opcionais
+                - cliente_nome (str): Nome do cliente
+                - data_inicio (str): Data inicial
+                - data_fim (str): Data final
+                - status (str): Status do orçamento
         
         Returns:
             QuerySet: Lista de orçamentos
         """
+        # ✅ Usar novos nomes
         orcamentos = Orcamento.objects.select_related(
-            'CLIENTE_idCLIENTE',
-            'PAGAMENTO_idPAGAMENTO'
-        ).prefetch_related('itens__PRODUTO_idPRODUTO').only(
-            'idORCAMENTO', 'DT_ORCAMENTO', 'VLR_TOTAL', 'STATUS',
-            'CLIENTE_idCLIENTE__NOME_CLIENTE', 'PAGAMENTO_idPAGAMENTO__TP_PAGAMENTO'
+            'cliente',  # ✅ Novo nome
+            'forma_pagamento'  # ✅ Novo nome
+        ).prefetch_related('itens__produto').only(  # ✅ Novos nomes
+            'id', 'data_orcamento', 'total', 'status',  # ✅ Novos nomes
+            'cliente__nome', 'forma_pagamento__nome'  # ✅ Novos nomes
         )
         
         if not filtros:
-            return orcamentos.order_by('-DT_ORCAMENTO')
+            # ✅ Ordenar por novo nome
+            return orcamentos.order_by('-data_orcamento')  # ✅ Novo nome
         
         # Filtro por nome do cliente
         if filtros.get('cliente_nome'):
+            # ✅ Usar novo nome
             orcamentos = orcamentos.filter(
-                CLIENTE_idCLIENTE__NOME_CLIENTE__icontains=filtros['cliente_nome']
+                cliente__nome__icontains=filtros['cliente_nome']  # ✅ Novo nome
             )
         
         # Filtro por data inicial
         if filtros.get('data_inicio'):
+            # ✅ Usar novo nome
             orcamentos = orcamentos.filter(
-                DT_ORCAMENTO__date__gte=filtros['data_inicio']
+                data_orcamento__date__gte=filtros['data_inicio']  # ✅ Novo nome
             )
         
         # Filtro por data final
         if filtros.get('data_fim'):
+            # ✅ Usar novo nome
             orcamentos = orcamentos.filter(
-                DT_ORCAMENTO__date__lte=filtros['data_fim']
+                data_orcamento__date__lte=filtros['data_fim']  # ✅ Novo nome
             )
         
         # Filtro por status
         if filtros.get('status') and filtros['status'] != 'todos':
-            orcamentos = orcamentos.filter(STATUS=filtros['status'])
+            # ✅ Usar novo nome
+            orcamentos = orcamentos.filter(status=filtros['status'])  # ✅ Novo nome
         
-        return orcamentos.order_by('-DT_ORCAMENTO')
+        # ✅ Ordenar por novo nome
+        return orcamentos.order_by('-data_orcamento')  # ✅ Novo nome
     
     @staticmethod
     def obter_orcamento(orcamento_id):
@@ -180,19 +194,28 @@ class OrcamentoService:
         
         Returns:
             Orcamento: Objeto do orçamento
+        
+        Raises:
+            ValueError: Se orçamento não encontrado
         """
         try:
             from django.db.models import Prefetch
-            itens_qs = ItemOrcamento.objects.select_related('PRODUTO_idPRODUTO').only(
-                'QUANTIDADE', 'VLR_UNITARIO', 'VLR_TOTAL', 'PRODUTO_idPRODUTO__idPRODUTO', 'PRODUTO_idPRODUTO__DESCRICAO'
+            
+            # ✅ Usar novos nomes
+            itens_qs = ItemOrcamento.objects.select_related('produto').only(
+                'quantidade', 'preco_unitario', 'total',  # ✅ Novos nomes
+                'produto__id', 'produto__descricao'  # ✅ Novos nomes
             )
+            
             return Orcamento.objects.select_related(
-                'CLIENTE_idCLIENTE',
-                'PAGAMENTO_idPAGAMENTO'
-            ).prefetch_related(Prefetch('itens', queryset=itens_qs)).only(
-                'idORCAMENTO', 'DT_ORCAMENTO', 'VLR_TOTAL', 'DESCONTO', 'VLR_FRETE', 'OBSERVACAO',
-                'CLIENTE_idCLIENTE__NOME_CLIENTE', 'PAGAMENTO_idPAGAMENTO__TP_PAGAMENTO'
-            ).get(idORCAMENTO=orcamento_id)
+                'cliente',  # ✅ Novo nome
+                'forma_pagamento'  # ✅ Novo nome
+            ).prefetch_related(
+                Prefetch('itens', queryset=itens_qs)  # ✅ Novo nome (related_name)
+            ).only(
+                'id', 'data_orcamento', 'total', 'desconto', 'frete', 'observacao',  # ✅ Novos nomes
+                'cliente__nome', 'forma_pagamento__nome'  # ✅ Novos nomes
+            ).get(id=orcamento_id)  # ✅ Novo nome
         except Orcamento.DoesNotExist:
             raise ValueError(f'Orçamento #{orcamento_id} não encontrado')
     
@@ -203,10 +226,13 @@ class OrcamentoService:
         
         Args:
             orcamento_id (int): ID do orçamento
-            novo_status (str): Novo status (PENDENTE, APROVADO, REJEITADO, CONVERTIDO)
+            novo_status (str): Novo status
         
         Returns:
-            Orcamento: Objeto do orçamento atualizado
+            Orcamento: Orçamento atualizado
+        
+        Raises:
+            ValueError: Se status inválido ou orçamento não encontrado
         """
         status_validos = ['PENDENTE', 'APROVADO', 'REJEITADO', 'CONVERTIDO']
         
@@ -214,17 +240,17 @@ class OrcamentoService:
             raise ValueError(f'Status inválido. Use: {", ".join(status_validos)}')
         
         try:
-            orcamento = Orcamento.objects.get(idORCAMENTO=orcamento_id)
-            orcamento.STATUS = novo_status
+            # ✅ Buscar e atualizar com novos nomes
+            orcamento = Orcamento.objects.get(id=orcamento_id)  # ✅ Novo nome
+            orcamento.status = novo_status  # ✅ Novo nome
             orcamento.save()
-            
-            print(f"[ORCAMENTO SERVICE] Status do orçamento #{orcamento_id} atualizado para {novo_status}")
             
             return orcamento
         except Orcamento.DoesNotExist:
             raise ValueError(f'Orçamento #{orcamento_id} não encontrado')
     
     @staticmethod
+    @transaction.atomic
     def deletar_orcamento(orcamento_id):
         """
         Deleta um orçamento e seus itens
@@ -233,69 +259,23 @@ class OrcamentoService:
             orcamento_id (int): ID do orçamento
         
         Returns:
-            bool: True se deletado com sucesso
+            bool: True se deletado
+        
+        Raises:
+            ValueError: Se orçamento já convertido ou não encontrado
         """
         try:
-            orcamento = Orcamento.objects.get(idORCAMENTO=orcamento_id)
+            # ✅ Buscar orçamento (novo nome)
+            orcamento = Orcamento.objects.get(id=orcamento_id)  # ✅ Novo nome
             
-            # Não permitir deletar orçamentos convertidos em venda
-            if orcamento.STATUS == 'CONVERTIDO':
+            # ✅ Validar status (novo nome)
+            if orcamento.status == 'CONVERTIDO':  # ✅ Novo nome
                 raise ValueError('Não é possível deletar um orçamento já convertido em venda')
             
-            orcamento_numero = orcamento.idORCAMENTO
+            # Deletar (CASCADE deleta itens automaticamente)
             orcamento.delete()
             
-            print(f"[ORCAMENTO SERVICE] Orçamento #{orcamento_numero} deletado com sucesso")
-            
             return True
-        except Orcamento.DoesNotExist:
-            raise ValueError(f'Orçamento #{orcamento_id} não encontrado')
-    
-    @staticmethod
-    def converter_para_venda(orcamento_id):
-        """
-        Converte um orçamento em venda (para implementação futura)
-        
-        Args:
-            orcamento_id (int): ID do orçamento
-        
-        Returns:
-            dict: Dados para criar a venda
-        """
-        try:
-            orcamento = OrcamentoService.obter_orcamento(orcamento_id)
-            
-            # Validar status
-            if orcamento.STATUS == 'CONVERTIDO':
-                raise ValueError('Este orçamento já foi convertido em venda')
-            
-            if orcamento.STATUS == 'REJEITADO':
-                raise ValueError('Não é possível converter um orçamento rejeitado em venda')
-            
-            # Preparar dados para venda
-            dados_venda = {
-                'cliente_id': orcamento.CLIENTE_idCLIENTE.idCLIENTE,
-                'forma_pagamento_id': orcamento.PAGAMENTO_idPAGAMENTO.idPAGAMENTO,
-                'desconto': float(orcamento.DESCONTO),
-                'frete': float(orcamento.VLR_FRETE or 0),
-                'itens': []
-            }
-            
-            # Adicionar itens (usar values() para evitar instanciar modelos)
-            from ..models import ItemOrcamento as ItemOrc
-            itens_vals = ItemOrc.objects.filter(ORCAMENTO_idORCAMENTO=orcamento).values(
-                'PRODUTO_idPRODUTO__idPRODUTO', 'QUANTIDADE', 'VLR_UNITARIO', 'VLR_TOTAL'
-            )
-            for item in itens_vals:
-                dados_venda['itens'].append({
-                    'produto_id': item.get('PRODUTO_idPRODUTO__idPRODUTO'),
-                    'quantidade': float(item.get('QUANTIDADE') or 0),
-                    'valor_unitario': float(item.get('VLR_UNITARIO') or 0),
-                    'valor_total': float(item.get('VLR_TOTAL') or 0)
-                })
-            
-            return dados_venda
-            
         except Orcamento.DoesNotExist:
             raise ValueError(f'Orçamento #{orcamento_id} não encontrado')
     
@@ -307,15 +287,14 @@ class OrcamentoService:
         Returns:
             dict: Estatísticas com totais por status
         """
-        from django.db.models import Count, Sum
-        
+        # ✅ Usar novos nomes
         stats = Orcamento.objects.aggregate(
-            total_orcamentos=Count('idORCAMENTO'),
-            total_pendentes=Count('idORCAMENTO', filter=Q(STATUS='PENDENTE')),
-            total_aprovados=Count('idORCAMENTO', filter=Q(STATUS='APROVADO')),
-            total_rejeitados=Count('idORCAMENTO', filter=Q(STATUS='REJEITADO')),
-            total_convertidos=Count('idORCAMENTO', filter=Q(STATUS='CONVERTIDO')),
-            valor_total=Sum('VLR_TOTAL')
+            total_orcamentos=Count('id'),  # ✅ Novo nome
+            total_pendentes=Count('id', filter=Q(status='PENDENTE')),  # ✅ Novos nomes
+            total_aprovados=Count('id', filter=Q(status='APROVADO')),  # ✅ Novos nomes
+            total_rejeitados=Count('id', filter=Q(status='REJEITADO')),  # ✅ Novos nomes
+            total_convertidos=Count('id', filter=Q(status='CONVERTIDO')),  # ✅ Novos nomes
+            valor_total=Sum('total')  # ✅ Novo nome
         )
         
         return {

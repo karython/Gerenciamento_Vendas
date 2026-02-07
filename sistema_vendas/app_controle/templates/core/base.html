@@ -13,7 +13,6 @@
 <body{% if is_auth_page %} class="{% block body_class %}{% endblock %}"{% endif %}>
 
     {% if not is_auth_page %}
-    <!-- Sidebar para páginas autenticadas -->
     <nav class="sidebar">
         <div class="logo">
             <img src="{% static 'img/logo.png' %}" alt="Logo da Empresa">
@@ -21,10 +20,9 @@
         
         <ul class="menu">
             <li><a href="{% url 'dashboard' %}" class="{% if request.path == '/dashboard/' %}active{% endif %}">Dashboard</a></li>
-            
-            <li><a href="{% url 'nova_venda' %}" class="{% if request.path == '/nova-venda/' %}active{% endif %}">Nova Venda</a></li>
+            <li><a href="{% url 'nova_venda' %}" class="{% if request.path == '/vendas/nova/' %}active{% endif %}">Nova Venda</a></li>
             <li><a href="{% url 'novo_orcamento' %}" class="{% if request.path == '/orcamentos/novo/' %}active{% endif %}">Novo Orçamento</a></li>
-            <li><a href="{% url 'orcamentos' %}" class="{% if request.path == '/orcamentos' %}active{% endif %}">Orçamentos</a></li>
+            <li><a href="{% url 'orcamentos' %}" class="{% if request.path == '/orcamentos/' %}active{% endif %}">Orçamentos</a></li>
             <li><a href="{% url 'vendas' %}" class="{% if request.path == '/vendas/' %}active{% endif %}">Vendas</a></li>
             <li><a href="{% url 'clientes' %}" class="{% if request.path == '/clientes/' %}active{% endif %}">Clientes</a></li>
             <li><a href="{% url 'estoque' %}" class="{% if request.path == '/estoque/' %}active{% endif %}">Estoque</a></li>
@@ -32,8 +30,8 @@
         
         <div class="loja-info">
             {% if loja %}
-                <h3>{{ loja.NOME_LOJA }}</h3>
-                <p>CNPJ: {{ loja.CNPJ }}</p>
+                <h3>{{ loja.nome }}</h3>
+                <p>CNPJ: {{ loja.cnpj }}</p>
             {% else %}
                 <h3>Minha Loja LTDA</h3>
                 <p>CNPJ: 00.000.000/0001-00</p>
@@ -50,15 +48,11 @@
     </main>
     
     {% else %}
-    <!-- Estrutura para páginas de autenticação -->
     <div class="{% block container_class %}{% endblock %}">
         <div class="{% block card_class %}{% endblock %}">
-            
             {% block header %}{% endblock %}
-
             <div class="{% block form_container_class %}{% endblock %}">
                 {% block messages %}{% endblock %}
-                
                 {% block auth_content %}{% endblock %}
             </div>
         </div>
@@ -71,11 +65,10 @@
     {% block scripts %}
     {% endblock %}
 
-    <!-- Keep-Alive Script - Mantém servidor ativo no Render -->
     {% if not is_auth_page %}
     <script>
         (function() {
-            const KEEPALIVE_INTERVAL = 4 * 60 * 1000; // 4 minutos
+            const KEEPALIVE_INTERVAL = 4 * 60 * 1000;
             const KEEPALIVE_URL = '/health/ping/';
             
             function keepAlive() {
@@ -83,8 +76,6 @@
                     .then(response => {
                         if (response.ok) {
                             console.log('[Keep-Alive] Servidor ativo ✓');
-                        } else {
-                            console.warn('[Keep-Alive] Resposta inesperada:', response.status);
                         }
                     })
                     .catch(error => {
@@ -92,12 +83,8 @@
                     });
             }
             
-            // Primeira execução após 30 segundos
             setTimeout(keepAlive, 30000);
-            
-            // Executa a cada 4 minutos
             setInterval(keepAlive, KEEPALIVE_INTERVAL);
-            
             console.log('[Keep-Alive] Sistema iniciado (intervalo: 4 min)');
         })();
     </script>

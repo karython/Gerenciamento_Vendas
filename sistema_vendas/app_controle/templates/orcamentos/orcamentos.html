@@ -1,0 +1,199 @@
+{% extends 'core/base.html' %}
+{% load static %}
+
+{% block title %}Orçamentos{% endblock %}
+
+{% block dashboard_content %}
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+<link rel="stylesheet" href="{% static 'css/orcamentos.css' %}">
+
+<div class="header-vendas"> 
+    <h1>Orçamentos</h1>
+    <div class="header-right">
+        <form method="GET" class="filtro-form">
+            <div class="filtro-group">
+                <label>Buscar Cliente:</label>
+                <input type="text" name="busca_nome" class="input-busca" 
+                       value="{{ busca_nome|default:'' }}" placeholder="Nome do cliente">
+            </div>
+
+            <div class="filtro-group">
+                <label>De:</label>
+                <input type="date" name="data_inicio" class="input-data" value="{{ data_inicio|default:'' }}">
+            </div>
+
+            <div class="filtro-group">
+                <label>Até:</label>
+                <input type="date" name="data_fim" class="input-data" value="{{ data_fim|default:'' }}">
+            </div>
+
+            <div class="filtro-group">
+                <label>Status:</label>
+                <select name="status" class="input-data" style="min-width: 120px;">
+                    <option value="todos" {% if status_filtro == 'todos' %}selected{% endif %}>Todos</option>
+                    <option value="PENDENTE" {% if status_filtro == 'PENDENTE' %}selected{% endif %}>Pendente</option>
+                    <option value="APROVADO" {% if status_filtro == 'APROVADO' %}selected{% endif %}>Aprovado</option>
+                    <option value="REJEITADO" {% if status_filtro == 'REJEITADO' %}selected{% endif %}>Rejeitado</option>
+                    <option value="CONVERTIDO" {% if status_filtro == 'CONVERTIDO' %}selected{% endif %}>Convertido</option>
+                </select>
+            </div>
+
+            <button type="submit" class="btn-filtrar">🔍 Filtrar</button>
+            <a href="{% url 'orcamentos' %}" class="btn-limpar">✖ Limpar</a>
+        </form>
+    </div>
+</div>
+
+<div id="barra-selecao" class="barra-selecao" style="display: none;">
+    <div class="selecao-info">
+        <span id="contador-selecionados">0</span> orçamento(s) selecionado(s)
+    </div>
+    <div class="selecao-acoes">
+        <button class="btn-deletar-multiplas" onclick="deletarSelecionados()">
+            🗑️ Deletar Selecionados
+        </button>
+        <button class="btn-cancelar" onclick="cancelarSelecao()">
+            Cancelar
+        </button>
+    </div>
+</div>
+
+<div class="card-vendas">
+    {% if orcamentos %}
+        <table class="tabela-vendas">
+            <thead>
+                <tr>
+                    <th style="width: 40px;">
+                        <input type="checkbox" id="selecionar-todos" onchange="selecionarTodos(this)">
+                    </th>
+                    <th>Nº</th>
+                    <th>Cliente</th>
+                    <th>Data</th>
+                    <th>Qtd. Itens</th>
+                    <th>Valor Total</th>
+                    <th>Status</th>
+                    <th style="text-align: center;">Ações</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for orcamento in orcamentos %}
+                <tr>
+                    <td>
+                        <input type="checkbox" class="checkbox-orcamento" value="{{ orcamento.id }}" 
+                               onchange="atualizarSelecao()">
+                    </td>
+                    
+                    <td><strong>OR-{{ orcamento.id|stringformat:"05d" }}</strong></td>
+                    <td>{{ orcamento.cliente.nome }}</td>
+                    <td>{{ orcamento.data_orcamento|date:"d/m/Y" }}</td>
+                    <td>{{ orcamento.itens.count }}</td> 
+                    <td>R$ {{ orcamento.total|floatformat:2 }}</td>
+                    <td>
+                        {% if orcamento.status == 'PENDENTE' %}
+                            <span class="badge badge-warning">Pendente</span>
+                        {% elif orcamento.status == 'APROVADO' %}
+                            <span class="badge badge-success">Aprovado</span>
+                        {% elif orcamento.status == 'REJEITADO' %}
+                            <span class="badge badge-danger">Rejeitado</span>
+                        {% elif orcamento.status == 'CONVERTIDO' %}
+                            <span class="badge badge-info">Convertido</span>
+                        {% endif %}
+                    </td>
+                    
+                    <td style="text-align: center;">
+                        <a href="#" class="btn-acao btn-detalhes" 
+                           onclick="verDetalhes({{ orcamento.id }}); return false;" title="Ver Detalhes">
+                            <i class="fas fa-eye"></i>
+                        </a>
+                        
+                        <a href="{% url 'gerar_pdf_orcamento' orcamento.id %}" 
+                           class="btn-acao btn-pdf" target="_blank" title="Baixar PDF">
+                            <i class="fas fa-file-pdf"></i>
+                        </a>
+                        
+                        {% if orcamento.status != 'CONVERTIDO' %}
+                        <a href="#" class="btn-acao btn-converter" 
+                           onclick="abrirConverterModal({{ orcamento.id }}); return false;"
+                           title="Converter em Venda">
+                            <i class="fas fa-exchange-alt"></i>
+                        </a>
+                        {% endif %}
+                        
+                        <a href="#" class="btn-acao btn-deletar" 
+                           onclick="deletarOrcamento({{ orcamento.id }}); return false;"
+                           title="Deletar Orçamento">
+                            <i class="fas fa-trash-alt"></i>
+                        </a>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    {% else %}
+        <p style="text-align: center; padding: 20px;">Nenhum orçamento encontrado</p>
+    {% endif %}
+</div>
+
+<div id="modal-detalhes" class="modal-overlay" style="display: none;">
+    <div class="modal-box">
+        <div class="modal-header">
+            <h2>Detalhes do Orçamento</h2>
+            <button class="btn-fechar" onclick="fecharModal()">&times;</button>
+        </div>
+        <div id="modal-content" class="modal-body">
+            <p>Carregando...</p>
+        </div>
+    </div>
+</div>
+
+<div id="modal-converter" class="modal-overlay" style="display: none;">
+    <div class="modal-box" style="max-width: 500px;">
+        <div class="modal-header">
+            <h2>Converter Orçamento em Venda</h2>
+            <button class="btn-fechar" onclick="fecharModalConverter()">&times;</button>
+        </div>
+        <div class="modal-body">
+            <p id="converter-info" style="margin-bottom: 15px;">Você tem certeza que deseja converter este orçamento em venda?</p>
+            <p style="font-size: 0.9em; color: #666;">Todos os itens e dados do orçamento serão mantidos.</p>
+            <hr>
+            <div style="display: flex; gap: 10px; justify-content: flex-end;">
+                <button class="btn-cancelar" onclick="fecharModalConverter()">Cancelar</button>
+                <button class="btn-converter-confirmar" id="btn-converter-confirmar" 
+                        onclick="confirmarConversao()">Converter para Venda</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script id="orcamentos-data" type="application/json">
+[
+    {% for orcamento in orcamentos %}
+    {
+        "id": {{ orcamento.id }},
+        "idFormatado": "OR-{{ orcamento.id|stringformat:"05d" }}",
+        "data": "{{ orcamento.data_orcamento|date:"d/m/Y H:i" }}",
+        "cliente": "{{ orcamento.cliente.nome|escapejs }}",
+        "telefone": "{{ orcamento.cliente.telefone|escapejs }}",
+        "total": "{{ orcamento.total|floatformat:2 }}",
+        "status": "{{ orcamento.status }}",
+        "formaPagamento": "{{ orcamento.forma_pagamento.nome|escapejs }}",
+        "urlPdf": "{% url 'gerar_pdf_orcamento' orcamento.id %}",
+        "itens": [
+            {% for item in orcamento.itens.all %}
+            {
+                "produto": "{{ item.produto.descricao|default:item.produto|escapejs }}",
+                "qtd": "{{ item.quantidade|floatformat:0 }}",
+                "unitario": "{{ item.preco_unitario|floatformat:2 }}",
+                "total": "{{ item.total|floatformat:2 }}"
+            }{% if not forloop.last %},{% endif %}
+            {% endfor %}
+        ]
+        ,"observacao": "{{ orcamento.observacao|default:''|escapejs }}"
+    }{% if not forloop.last %},{% endif %}
+    {% endfor %}
+]
+</script>
+
+<script src="{% static 'js/orcamentos.js' %}"></script>
+
+{% endblock %}

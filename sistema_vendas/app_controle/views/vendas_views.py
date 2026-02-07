@@ -1,55 +1,62 @@
 # app_controle/views/vendas_views.py
+"""
+Views de listagem e gerenciamento de vendas
+"""
 
 from django.shortcuts import render
 from django.core.paginator import Paginator
 from django.http import JsonResponse
-from datetime import datetime
 from ..services.venda_services import VendaService
 from ..services.auth_services import AuthService
 from ..models import Orcamento, Venda, ItemVenda
 
+
 @AuthService.requer_login
 def vendas(request):
-    """Lista todas as vendas e orçamentos com filtros por tipo, data e nome"""
+    """Lista todas as vendas e orçamentos com filtros"""
     loja = AuthService.loja_logada(request)
     data_inicio = request.GET.get('data_inicio')
     data_fim = request.GET.get('data_fim')
     busca_nome = request.GET.get('busca_nome')
-    tipo_filtro = request.GET.get('tipo', 'todas')  # 'vendas', 'orcamentos' ou 'todas'
+    tipo_filtro = request.GET.get('tipo', 'todas')
     
+    # Listar vendas
     vendas_lista = VendaService.listar_vendas(
         data_inicio=data_inicio,
         data_fim=data_fim,
         busca_nome=busca_nome
     )
     
+    # Listar orçamentos se necessário
     orcamentos_lista = []
     if tipo_filtro in ['orcamentos', 'todas']:
-        # Selecionar apenas os campos necessários e buscar cliente/pagamento em join
-        orcamentos = Orcamento.objects.select_related('CLIENTE_idCLIENTE', 'PAGAMENTO_idPAGAMENTO').only(
-            'idORCAMENTO', 'DT_ORCAMENTO', 'VLR_TOTAL', 'STATUS',
-            'CLIENTE_idCLIENTE__NOME_CLIENTE', 'CLIENTE_idCLIENTE__TELEFONE',
-            'PAGAMENTO_idPAGAMENTO__TP_PAGAMENTO'
+        # ✅ Usar novos nomes
+        orcamentos = Orcamento.objects.select_related(
+            'cliente',  # ✅ Novo nome
+            'forma_pagamento'  # ✅ Novo nome
+        ).only(
+            'id', 'data_orcamento', 'total', 'status',  # ✅ Novos nomes
+            'cliente__nome', 'cliente__telefone',  # ✅ Novos nomes
+            'forma_pagamento__nome'  # ✅ Novo nome
         )
 
-        # Filtro por nome do cliente
+        # Filtro por nome
         if busca_nome:
-            orcamentos = orcamentos.filter(CLIENTE_idCLIENTE__NOME_CLIENTE__icontains=busca_nome)
+            orcamentos = orcamentos.filter(cliente__nome__icontains=busca_nome)  # ✅ Novo nome
 
         # Filtro por data
         if data_inicio:
             from django.utils.dateparse import parse_date
             dt_inicio = parse_date(data_inicio)
             if dt_inicio:
-                orcamentos = orcamentos.filter(DT_ORCAMENTO__date__gte=dt_inicio)
+                orcamentos = orcamentos.filter(data_orcamento__date__gte=dt_inicio)  # ✅ Novo nome
 
         if data_fim:
             from django.utils.dateparse import parse_date
             dt_fim = parse_date(data_fim)
             if dt_fim:
-                orcamentos = orcamentos.filter(DT_ORCAMENTO__date__lte=dt_fim)
+                orcamentos = orcamentos.filter(data_orcamento__date__lte=dt_fim)  # ✅ Novo nome
 
-        # Mantemos queryset e aplicamos paginação mais abaixo
         orcamentos_lista = orcamentos
     
     # Filtrar por tipo
@@ -58,11 +65,10 @@ def vendas(request):
     elif tipo_filtro == 'orcamentos':
         vendas_lista = []
 
-    # Paginação para reduzir carga em listagens
+    # Paginação
     page = request.GET.get('page', 1)
     per_page = 25
 
-    # Paginator aceita queryset ou list; usamos de forma segura
     paginator_vendas = Paginator(vendas_lista, per_page)
     vendas_page = paginator_vendas.get_page(page)
 
@@ -79,99 +85,50 @@ def vendas(request):
         'loja': loja
     }
     
-    return render(request, 'vendas.html', context)
+    return render(request, 'vendas/vendas.html', context)
 
-@AuthService.requer_login
-def orcamentos(request):
-    """Lista apenas orçamentos com filtros"""
-    loja = AuthService.loja_logada(request)
-    data_inicio = request.GET.get('data_inicio')
-    data_fim = request.GET.get('data_fim')
-    busca_nome = request.GET.get('busca_nome')
-    status_filtro = request.GET.get('status', 'todos')  # 'PENDENTE', 'APROVADO', etc ou 'todos'
-    
-    orcamentos_lista = Orcamento.objects.select_related('CLIENTE_idCLIENTE', 'PAGAMENTO_idPAGAMENTO').all()
-    
-    # Filtro por nome do cliente
-    if busca_nome:
-        orcamentos_lista = orcamentos_lista.filter(CLIENTE_idCLIENTE__NOME_CLIENTE__icontains=busca_nome)
-    
-    # Filtro por data
-    if data_inicio:
-        from django.utils.dateparse import parse_date
-        dt_inicio = parse_date(data_inicio)
-        if dt_inicio:
-            orcamentos_lista = orcamentos_lista.filter(DT_ORCAMENTO__date__gte=dt_inicio)
-    
-    if data_fim:
-        from django.utils.dateparse import parse_date
-        dt_fim = parse_date(data_fim)
-        if dt_fim:
-            orcamentos_lista = orcamentos_lista.filter(DT_ORCAMENTO__date__lte=dt_fim)
-    
-    # Filtrar por status se necessário
-    if status_filtro != 'todos':
-        orcamentos_lista = orcamentos_lista.filter(STATUS=status_filtro)
-    
-    # Ordenar por data decrescente
-    orcamentos_lista = orcamentos_lista.order_by('-DT_ORCAMENTO')
-
-    # Paginação
-    page = request.GET.get('page', 1)
-    per_page = 25
-    paginator_orc = Paginator(orcamentos_lista, per_page)
-    orcamentos_page = paginator_orc.get_page(page)
-
-    context = {
-        'orcamentos': orcamentos_page,
-        'data_inicio': data_inicio,
-        'data_fim': data_fim,
-        'busca_nome': busca_nome,
-        'status_filtro': status_filtro,
-        'loja': loja,
-        'paginator': paginator_orc,
-        'page_obj': orcamentos_page,
-    }
-
-    return render(request, 'orcamentos.html', context)
 
 @AuthService.requer_login
 def detalhes_venda(request, venda_id):
-    """
-    Retorna os detalhes completos de uma venda incluindo os produtos
-    """
+    """Retorna os detalhes completos de uma venda incluindo produtos"""
     try:
-        venda = Venda.objects.select_related('CLIENTE_idCLIENTE', 'PAGAMENTO_idPAGAMENTO').only(
-            'idVENDA', 'DT_VENDA', 'VLR_TOTAL', 'OBSERVACAO',
-            'CLIENTE_idCLIENTE__NOME_CLIENTE', 'CLIENTE_idCLIENTE__TELEFONE',
-            'PAGAMENTO_idPAGAMENTO__TP_PAGAMENTO'
-        ).get(idVENDA=venda_id)
+        # ✅ Usar novos nomes
+        venda = Venda.objects.select_related(
+            'cliente',  # ✅ Novo nome
+            'forma_pagamento'  # ✅ Novo nome
+        ).only(
+            'id', 'data_venda', 'total', 'observacao',  # ✅ Novos nomes
+            'cliente__nome', 'cliente__telefone',  # ✅ Novos nomes
+            'forma_pagamento__nome'  # ✅ Novo nome
+        ).get(id=venda_id)  # ✅ Novo nome
 
-        # Buscar os itens da venda (campos mínimos)
-        itens = ItemVenda.objects.filter(VENDA_idVENDA=venda).select_related('PRODUTO_idPRODUTO').only(
-            'QTD_ITEM', 'VLR_ITEM', 'PRODUTO_idPRODUTO__NOME_PRODUTO'
+        # Buscar itens
+        itens = ItemVenda.objects.filter(
+            venda=venda  # ✅ Novo nome
+        ).select_related('produto').only(  # ✅ Novo nome
+            'quantidade', 'total', 'produto__descricao'  # ✅ Novos nomes
         )
 
-        # Montar lista de produtos sem instanciar muitos objetos ao mesmo tempo
+        # Montar lista de produtos
         produtos = []
         for item in itens.iterator():
             produtos.append({
-                'nome': item.PRODUTO_idPRODUTO.NOME_PRODUTO,
-                'quantidade': item.QTD_ITEM,
-                'total': f"{item.VLR_ITEM:.2f}".replace('.', ',')
+                'nome': item.produto.descricao,  # ✅ Novo nome
+                'quantidade': item.quantidade,  # ✅ Novo nome
+                'total': f"{item.total:.2f}".replace('.', ',')  # ✅ Novo nome
             })
 
         # Montar dados da venda
         dados_venda = {
-            'numero': f"V-{venda.idVENDA:05d}",
-            'cliente': venda.CLIENTE_idCLIENTE.NOME_CLIENTE,
-            'telefone': venda.CLIENTE_idCLIENTE.TELEFONE or 'Não informado',
-            'data': venda.DT_VENDA.strftime('%d/%m/%Y %H:%M'),
-            'total': f"{venda.VLR_TOTAL:.2f}".replace('.', ','),
-            'formaPagamento': venda.PAGAMENTO_idPAGAMENTO.TP_PAGAMENTO,
+            'numero': f"V-{venda.id:05d}",  # ✅ Novo nome
+            'cliente': venda.cliente.nome,  # ✅ Novo nome
+            'telefone': venda.cliente.telefone or 'Não informado',  # ✅ Novo nome
+            'data': venda.data_venda.strftime('%d/%m/%Y %H:%M'),  # ✅ Novo nome
+            'total': f"{venda.total:.2f}".replace('.', ','),  # ✅ Novo nome
+            'formaPagamento': venda.forma_pagamento.nome,  # ✅ Novo nome
             'produtos': produtos,
-            'observacao': venda.OBSERVACAO if getattr(venda, 'OBSERVACAO', None) else '',
-            'urlPdf': f"/vendas/pdf/{venda.idVENDA}/"  # Ajuste conforme sua URL
+            'observacao': venda.observacao if venda.observacao else '',  # ✅ Novo nome
+            'urlPdf': f"/vendas/pdf/{venda.id}/"  # ✅ Novo nome
         }
 
         return JsonResponse({
@@ -184,23 +141,18 @@ def detalhes_venda(request, venda_id):
             'success': False,
             'message': 'Venda não encontrada'
         }, status=404)
-
     except Exception as e:
-        print(f"[VIEW] Erro ao buscar detalhes da venda: {str(e)}")
-        import traceback
-        traceback.print_exc()
         return JsonResponse({
             'success': False,
             'message': f'Erro ao carregar detalhes: {str(e)}'
         }, status=500)
+
 
 @AuthService.requer_login
 def deletar_venda(request, venda_id):
     """Deleta uma venda do sistema"""
     if request.method == 'POST':
         try:
-            print(f"[VIEW] Deletando venda ID: {venda_id}")
-            
             venda_numero = VendaService.deletar_venda(venda_id)
             
             return JsonResponse({
@@ -209,24 +161,21 @@ def deletar_venda(request, venda_id):
             })
             
         except ValueError as e:
-            print(f"[VIEW] Erro de validação: {str(e)}")
             return JsonResponse({
                 'success': False,
                 'message': str(e)
             }, status=400)
         except Exception as e:
-            print(f"[VIEW] ERRO ao deletar venda: {str(e)}")
-            import traceback
-            traceback.print_exc()
             return JsonResponse({
                 'success': False,
                 'message': f'Erro ao deletar venda: {str(e)}'
-            }, status=400)
+            }, status=500)
     
     return JsonResponse({
         'success': False,
         'message': 'Método não permitido'
     }, status=405)
+
 
 @AuthService.requer_login
 def deletar_vendas_multiplas(request):
@@ -242,8 +191,6 @@ def deletar_vendas_multiplas(request):
                     'success': False,
                     'message': 'Nenhuma venda selecionada'
                 }, status=400)
-            
-            print(f"[VIEW] Deletando {len(vendas_ids)} vendas: {vendas_ids}")
             
             vendas_deletadas = []
             erros = []
@@ -270,47 +217,10 @@ def deletar_vendas_multiplas(request):
             })
             
         except Exception as e:
-            print(f"[VIEW] ERRO ao deletar vendas múltiplas: {str(e)}")
-            import traceback
-            traceback.print_exc()
             return JsonResponse({
                 'success': False,
                 'message': f'Erro ao deletar vendas: {str(e)}'
-            }, status=400)
-    
-    return JsonResponse({
-        'success': False,
-        'message': 'Método não permitido'
-    }, status=405)
-
-@AuthService.requer_login
-def deletar_orcamento(request, orcamento_id):
-    """Deleta um orçamento do sistema"""
-    if request.method == 'POST':
-        try:
-            print(f"[VIEW] Deletando orçamento ID: {orcamento_id}")
-            
-            orcamento = Orcamento.objects.get(idORCAMENTO=orcamento_id)
-            orcamento_numero = orcamento.idORCAMENTO
-            orcamento.delete()
-            
-            return JsonResponse({
-                'success': True,
-                'message': f'✅ Orçamento {orcamento_numero} deletado com sucesso!'
-            })
-            
-        except Orcamento.DoesNotExist:
-            print(f"[VIEW] Orçamento não encontrado: {orcamento_id}")
-            return JsonResponse({
-                'success': False,
-                'message': 'Orçamento não encontrado'
-            }, status=404)
-        except Exception as e:
-            print(f"[VIEW] Erro ao deletar orçamento: {str(e)}")
-            return JsonResponse({
-                'success': False,
-                'message': f'Erro ao deletar orçamento: {str(e)}'
-            }, status=400)
+            }, status=500)
     
     return JsonResponse({
         'success': False,

@@ -1,71 +1,97 @@
-# ============================================
 # app_controle/views/estoque_views.py
-# ============================================
+"""
+Views de gerenciamento de estoque e produtos
+"""
 
-from django.shortcuts import render, redirect, get_object_or_404
+from django.shortcuts import render
 from django.http import JsonResponse
-from django.contrib import messages
+from datetime import datetime
 from ..services.estoque_services import EstoqueService
 from ..services.auth_services import AuthService
 from ..models import Produto, Estoque
-from datetime import datetime
+
 
 @AuthService.requer_login
 def estoque(request):
     """Lista todos os produtos em estoque - OTIMIZADO"""
     loja = AuthService.loja_logada(request)
     estoques = EstoqueService.listar_estoque()
-    return render(request, 'estoque.html', {
+    
+    return render(request, 'estoque/estoque.html', {
         'estoques': estoques,
         'loja': loja
     })
 
+
 @AuthService.requer_login
 def cadastrar_produto(request):
-    """Cadastra um novo produto no estoque - OTIMIZADO"""
+    """Cadastra um novo produto no estoque"""
     if request.method == 'POST':
         try:
             import json
             dados = json.loads(request.body)
             
+            # Validações
             if not dados.get('nome'):
-                return JsonResponse({'success': False, 'message': 'Nome do produto é obrigatório'}, status=400)
+                return JsonResponse({
+                    'success': False,
+                    'message': 'Nome do produto é obrigatório'
+                }, status=400)
             
             if not dados.get('preco_venda') or float(dados['preco_venda']) <= 0:
-                return JsonResponse({'success': False, 'message': 'Preço de venda inválido'}, status=400)
+                return JsonResponse({
+                    'success': False,
+                    'message': 'Preço de venda inválido'
+                }, status=400)
             
             if not dados.get('quantidade_inicial') or int(dados['quantidade_inicial']) < 0:
-                return JsonResponse({'success': False, 'message': 'Quantidade inicial inválida'}, status=400)
+                return JsonResponse({
+                    'success': False,
+                    'message': 'Quantidade inicial inválida'
+                }, status=400)
             
-            dados['data_movimentacao'] = datetime.now()
+            # Cadastrar
             resultado = EstoqueService.cadastrar_produto_estoque(dados)
             
             return JsonResponse({
                 'success': True,
                 'message': 'Produto cadastrado com sucesso!',
                 'produto': {
-                    'id': resultado['produto'].idPRODUTO,
-                    'estoque_id': resultado['estoque'].idESTOQUE,
-                    'nome': resultado['produto'].DESCRICAO,
-                    'preco': float(resultado['produto'].VLR_UNIT),
-                    'quantidade': resultado['estoque'].QTD_DISPONIVEL
+                    'id': resultado['produto'].id,  # ✅ Novo nome
+                    'estoque_id': resultado['estoque'].id,  # ✅ Novo nome
+                    'nome': resultado['produto'].descricao,  # ✅ Novo nome
+                    'preco': float(resultado['produto'].preco_unitario),  # ✅ Novo nome
+                    'quantidade': resultado['estoque'].quantidade_disponivel  # ✅ Novo nome
                 }
             })
             
         except ValueError as e:
-            return JsonResponse({'success': False, 'message': str(e)}, status=400)
+            return JsonResponse({
+                'success': False,
+                'message': str(e)
+            }, status=400)
         except Exception as e:
-            return JsonResponse({'success': False, 'message': f'Erro: {str(e)}'}, status=500)
+            return JsonResponse({
+                'success': False,
+                'message': f'Erro: {str(e)}'
+            }, status=500)
     
-    return JsonResponse({'success': False, 'message': 'Método não permitido'}, status=405)
+    return JsonResponse({
+        'success': False,
+        'message': 'Método não permitido'
+    }, status=405)
+
 
 @AuthService.requer_login
 def buscar_produto_ajax(request, produto_id):
-    """Busca dados de um produto para edição - AJAX OTIMIZADO"""
+    """Busca dados de um produto para edição - AJAX"""
     if request.method != 'GET':
-        return JsonResponse({'success': False, 'message': 'Método inválido'}, status=400)
+        return JsonResponse({
+            'success': False,
+            'message': 'Método inválido'
+        }, status=400)
+    
     try:
-        # Usar o service para garantir retorno consistente (inclui flag is_service)
         resultado = EstoqueService.buscar_produto(produto_id)
 
         if not resultado.get('estoque'):
@@ -77,7 +103,7 @@ def buscar_produto_ajax(request, produto_id):
         return JsonResponse({
             'success': True,
             'produto': {
-                'id': resultado['produto'].idPRODUTO,
+                'id': resultado['produto'].id,  # ✅ Novo nome
                 'nome': resultado['nome'],
                 'preco_custo': resultado['preco_custo'],
                 'preco_venda': resultado['preco_venda'],
@@ -92,74 +118,76 @@ def buscar_produto_ajax(request, produto_id):
             'message': 'Produto não encontrado'
         }, status=404)
     except Exception as e:
-        print(f"[VIEW] Erro ao buscar produto: {str(e)}")
-        import traceback
-        traceback.print_exc()
         return JsonResponse({
             'success': False,
             'message': f'Erro: {str(e)}'
         }, status=500)
 
+
 @AuthService.requer_login
 def editar_produto(request, produto_id):
-    """Edita um produto"""
+    """Edita um produto existente"""
     if request.method == 'POST':
         try:
             import json
             dados = json.loads(request.body)
             
-            print("=" * 50)
-            print(f"[VIEW] Editando produto {produto_id}")
-            print(f"Dados recebidos: {dados}")
-            
+            # Validações
             if not dados.get('nome'):
-                return JsonResponse({'success': False, 'message': 'Nome é obrigatório'}, status=400)
+                return JsonResponse({
+                    'success': False,
+                    'message': 'Nome é obrigatório'
+                }, status=400)
             
             if not dados.get('preco_venda') or float(dados['preco_venda']) <= 0:
-                return JsonResponse({'success': False, 'message': 'Preço de venda inválido'}, status=400)
+                return JsonResponse({
+                    'success': False,
+                    'message': 'Preço de venda inválido'
+                }, status=400)
             
             if 'quantidade' in dados and int(dados['quantidade']) < 0:
-                return JsonResponse({'success': False, 'message': 'Quantidade não pode ser negativa'}, status=400)
+                return JsonResponse({
+                    'success': False,
+                    'message': 'Quantidade não pode ser negativa'
+                }, status=400)
             
+            # Atualizar
             produto = EstoqueService.atualizar_produto(produto_id, dados)
-            
-            print(f"[VIEW] Produto {produto_id} atualizado com sucesso!")
-            print("=" * 50)
             
             return JsonResponse({
                 'success': True,
                 'message': 'Produto atualizado com sucesso!',
                 'produto': {
-                    'id': produto.idPRODUTO,
-                    'nome': produto.DESCRICAO,
-                    'preco_custo': float(produto.IOF) if produto.IOF else 0.0,
-                    'preco_venda': float(produto.VLR_UNIT)
+                    'id': produto.id,  # ✅ Novo nome
+                    'nome': produto.descricao,  # ✅ Novo nome
+                    'preco_custo': float(produto.iof) if produto.iof else 0.0,  # ✅ Novo nome
+                    'preco_venda': float(produto.preco_unitario)  # ✅ Novo nome
                 }
             })
             
         except ValueError as e:
-            print(f"[VIEW] Erro de validação: {str(e)}")
-            return JsonResponse({'success': False, 'message': str(e)}, status=400)
+            return JsonResponse({
+                'success': False,
+                'message': str(e)
+            }, status=400)
         except Exception as e:
-            print(f"[VIEW] Erro ao editar produto: {str(e)}")
-            import traceback
-            traceback.print_exc()
-            return JsonResponse({'success': False, 'message': str(e)}, status=500)
+            return JsonResponse({
+                'success': False,
+                'message': str(e)
+            }, status=500)
     
-    return JsonResponse({'success': False, 'message': 'Método não permitido'}, status=405)
+    return JsonResponse({
+        'success': False,
+        'message': 'Método não permitido'
+    }, status=405)
+
 
 @AuthService.requer_login
 def deletar_produto(request, produto_id):
     """Deleta um produto do banco de dados"""
     if request.method == 'POST':
         try:
-            print("=" * 50)
-            print(f"[VIEW] Deletando produto {produto_id}")
-            
             nome = EstoqueService.deletar_produto(produto_id)
-            
-            print(f"[VIEW] Produto '{nome}' deletado com sucesso!")
-            print("=" * 50)
             
             return JsonResponse({
                 'success': True,
@@ -167,15 +195,21 @@ def deletar_produto(request, produto_id):
             })
             
         except ValueError as e:
-            print(f"[VIEW] Erro: {str(e)}")
-            return JsonResponse({'success': False, 'message': str(e)}, status=400)
+            return JsonResponse({
+                'success': False,
+                'message': str(e)
+            }, status=400)
         except Exception as e:
-            print(f"[VIEW] Erro ao deletar produto: {str(e)}")
-            import traceback
-            traceback.print_exc()
-            return JsonResponse({'success': False, 'message': str(e)}, status=500)
+            return JsonResponse({
+                'success': False,
+                'message': str(e)
+            }, status=500)
     
-    return JsonResponse({'success': False, 'message': 'Método não permitido'}, status=405)
+    return JsonResponse({
+        'success': False,
+        'message': 'Método não permitido'
+    }, status=405)
+
 
 @AuthService.requer_login
 def adicionar_reposicao(request, produto_id):
@@ -188,24 +222,31 @@ def adicionar_reposicao(request, produto_id):
             quantidade = int(dados.get('quantidade', 0))
             
             if quantidade <= 0:
-                return JsonResponse({'success': False, 'message': 'Quantidade deve ser maior que zero'}, status=400)
-            
-            print(f"[VIEW] Adicionando {quantidade} unidades ao produto {produto_id}")
+                return JsonResponse({
+                    'success': False,
+                    'message': 'Quantidade deve ser maior que zero'
+                }, status=400)
             
             estoque = EstoqueService.adicionar_reposicao(produto_id, quantidade)
             
             return JsonResponse({
                 'success': True,
                 'message': f'{quantidade} unidades adicionadas com sucesso!',
-                'nova_quantidade': estoque.QTD_DISPONIVEL
+                'nova_quantidade': estoque.quantidade_disponivel  # ✅ Novo nome
             })
             
         except ValueError as e:
-            return JsonResponse({'success': False, 'message': str(e)}, status=400)
+            return JsonResponse({
+                'success': False,
+                'message': str(e)
+            }, status=400)
         except Exception as e:
-            print(f"[VIEW] Erro ao adicionar reposição: {str(e)}")
-            import traceback
-            traceback.print_exc()
-            return JsonResponse({'success': False, 'message': str(e)}, status=500)
+            return JsonResponse({
+                'success': False,
+                'message': str(e)
+            }, status=500)
     
-    return JsonResponse({'success': False, 'message': 'Método não permitido'}, status=405)
+    return JsonResponse({
+        'success': False,
+        'message': 'Método não permitido'
+    }, status=405)

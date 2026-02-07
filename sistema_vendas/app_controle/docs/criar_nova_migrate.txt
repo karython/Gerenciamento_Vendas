@@ -1,0 +1,40 @@
+cd ~/Área\ de\ Trabalho/ProjetoVendas/Gerenciamento_Vendas/sistema_vendas
+
+echo "=== 1. LIMPAR MIGRATIONS ==="
+rm -f app_controle/migrations/0*.py
+ls app_controle/migrations/
+
+echo ""
+echo "=== 2. LIMPAR CACHE ==="
+find . -type d -name "__pycache__" -exec rm -rf {} + 2>/dev/null
+find . -name "*.pyc" -delete
+
+echo ""
+echo "=== 3. CRIAR MIGRATION INICIAL ==="
+python manage.py makemigrations
+# RESPONDA 'N' para todas as perguntas de renomear
+
+echo ""
+echo "=== 4. APLICAR MIGRATIONS ==="
+python manage.py migrate
+
+echo ""
+echo "=== 5. VERIFICAR TABELAS ==="
+python manage.py dbshell << 'EOF'
+SHOW TABLES;
+DESCRIBE LOJA;
+EXIT;
+EOF
+
+echo ""
+echo "=== 6. CRIAR SUPERUSUÁRIO ==="
+python manage.py createsuperuser
+```
+
+---
+
+## 🎯 **IMPORTANTE: Responder N nas Perguntas**
+
+Quando o `makemigrations` perguntar:
+```
+Was loja.NOME_LOJA renamed to loja.nome (a CharField)? [y/N]

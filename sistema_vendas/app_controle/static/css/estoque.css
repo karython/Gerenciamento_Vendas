@@ -1,0 +1,94 @@
+/* ============================================
+   ESTOQUE.CSS - Estilos para página de estoque
+   ============================================ */
+
+/* Estilos para os Botões de Ação (Ícones) */
+.btn-acao {
+    border: none;
+    background: none;
+    cursor: pointer;
+    font-size: 1.1rem;
+    margin: 0 8px;
+    transition: transform 0.2s, color 0.2s;
+    display: inline-block;
+}
+
+/* Ícone Editar (Azul) */
+.btn-editar {
+    color: #007bff;
+}
+.btn-editar:hover {
+    color: #0056b3;
+    transform: scale(1.15);
+}
+
+/* Ícone Deletar (Vermelho) */
+.btn-deletar {
+    color: #dc3545;
+}
+.btn-deletar:hover {
+    color: #a71d2a;
+    transform: scale(1.15);
+}
+
+/* --- Estilos Gerais --- */
+.header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 20px;
+}
+
+.btn-secondary {
+    background-color: #6c757d;
+    color: white;
+}
+
+.btn-secondary:hover {
+    background-color: #5a6268;
+}
+
+.modal {
+    display: none;
+    position: fixed;
+    z-index: 1000;
+    left: 0;
+    top: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.5);
+}
+
+.modal-content {
+    background-color: white;
+    margin: 5% auto;
+    padding: 30px;
+    border-radius: 10px;
+    width: 90%;
+    max-width: 600px;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+}
+
+.close {
+    color: #aaa;
+    float: right;
+    font-size: 28px;
+    font-weight: bold;
+    cursor: pointer;
+    line-height: 20px;
+}
+
+.close:hover {
+    color: #000;
+}
+
+.modal h2 {
+    margin-top: 0;
+    margin-bottom: 20px;
+    color: #2c3e50;
+}
+
+/* Ajuste alinhamento tabela */
+.tabela tbody td {
+    vertical-align: middle;
+}

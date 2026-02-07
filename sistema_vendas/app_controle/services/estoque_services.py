@@ -1,35 +1,46 @@
 # app_controle/services/estoque_services.py
+"""
+Service de gerenciamento de estoque e produtos
+"""
 
 from django.db import transaction
 from decimal import Decimal
 from ..models import Estoque, Produto
 
+
 class EstoqueService:
     
     @staticmethod
     def listar_estoque():
-        """Lista todos os produtos com informações de estoque"""
-        estoques = Estoque.objects.select_related('PRODUTO_idPRODUTO').only(
-            'idESTOQUE', 'QTD_DISPONIVEL',
-            'PRODUTO_idPRODUTO__idPRODUTO', 'PRODUTO_idPRODUTO__DESCRICAO', 'PRODUTO_idPRODUTO__IOF', 'PRODUTO_idPRODUTO__VLR_UNIT'
+        """
+        Lista todos os produtos com informações de estoque
+        
+        Returns:
+            list: Lista de dicts com informações dos produtos
+        """
+        # ✅ Usar novos nomes
+        estoques = Estoque.objects.select_related('produto').only(
+            'id', 'quantidade_disponivel',  # ✅ Novos nomes
+            'produto__id', 'produto__descricao',  # ✅ Novos nomes
+            'produto__iof', 'produto__preco_unitario'  # ✅ Novos nomes
         )
         
         resultado = []
         for estoque in estoques.iterator():
-            produto = estoque.PRODUTO_idPRODUTO
+            produto = estoque.produto  # ✅ Novo nome
             
-            # IOF armazena o preço de custo, VLR_UNIT o preço de venda
-            preco_custo = float(produto.IOF) if produto.IOF and produto.IOF != '0' else 0.0
-            preco_venda = float(produto.VLR_UNIT) if produto.VLR_UNIT else 0.0
+            # IOF armazena o preço de custo, preco_unitario o preço de venda
+            preco_custo = float(produto.iof) if produto.iof else 0.0  # ✅ Novo nome
+            preco_venda = float(produto.preco_unitario)  # ✅ Novo nome
             lucro = preco_venda - preco_custo
             
             resultado.append({
-                'id': estoque.idESTOQUE,
-                'produto_id': produto.idPRODUTO,
-                'nome': produto.DESCRICAO,
+                'id': estoque.id,  # ✅ Novo nome
+                'produto_id': produto.id,  # ✅ Novo nome
+                'nome': produto.descricao,  # ✅ Novo nome
                 'preco_custo': preco_custo,
                 'preco_venda': preco_venda,
-                'quantidade': estoque.QTD_DISPONIVEL,
+                'quantidade': estoque.quantidade_disponivel,  # ✅ Novo nome
                 'lucro_unitario': lucro,
             })
         
@@ -38,27 +49,35 @@ class EstoqueService:
     @staticmethod
     @transaction.atomic
     def cadastrar_produto_estoque(dados):
-        """Cadastra um novo produto e seu estoque"""
-        print(f"[ESTOQUE SERVICE] Cadastrando produto: {dados}")
+        """
+        Cadastra um novo produto e seu estoque
         
-        # Criar produto - IOF guarda preço de custo, VLR_UNIT guarda preço de venda
-        # Se for marcado como serviço, não rastreamos estoque (TRACK_STOCK=False)
+        Args:
+            dados (dict): Dados do produto
+                - nome (str): Nome/descrição do produto
+                - preco_venda (float): Preço de venda
+                - preco_custo (float, opcional): Preço de custo
+                - quantidade_inicial (int): Quantidade inicial em estoque
+                - is_service (bool, opcional): Se é um serviço
+        
+        Returns:
+            dict: {'produto': Produto, 'estoque': Estoque}
+        """
+        # ✅ Criar produto com novos nomes
         is_service = bool(dados.get('is_service', False))
+        
         produto = Produto.objects.create(
-            DESCRICAO=dados['nome'],
-            VLR_UNIT=str(dados['preco_venda']),
-            IOF=str(dados.get('preco_custo', 0)),
-            DT_MOVIMENTADA=dados.get('data_movimentacao'),
-            TRACK_STOCK=(not is_service)
+            descricao=dados['nome'],  # ✅ Novo nome
+            preco_unitario=Decimal(str(dados['preco_venda'])),  # ✅ Novo nome
+            iof=Decimal(str(dados.get('preco_custo', 0))),  # ✅ Novo nome
+            controlar_estoque=(not is_service)  # ✅ Novo nome
         )
         
-        # Criar estoque
+        # ✅ Criar estoque (novos nomes)
         estoque = Estoque.objects.create(
-            PRODUTO_idPRODUTO=produto,
-            QTD_DISPONIVEL=dados['quantidade_inicial']
+            produto=produto,  # ✅ Novo nome
+            quantidade_disponivel=dados['quantidade_inicial']  # ✅ Novo nome
         )
-        
-        print(f"[ESTOQUE SERVICE] Produto criado ID: {produto.idPRODUTO}, Estoque ID: {estoque.idESTOQUE}")
         
         return {
             'produto': produto,
@@ -68,73 +87,111 @@ class EstoqueService:
     @staticmethod
     @transaction.atomic
     def adicionar_reposicao(produto_id, quantidade):
-        """Adiciona quantidade ao estoque de um produto"""
-        print(f"[ESTOQUE SERVICE] Adicionando {quantidade} unidades ao produto {produto_id}")
+        """
+        Adiciona quantidade ao estoque de um produto
         
+        Args:
+            produto_id (int): ID do produto
+            quantidade (int): Quantidade a adicionar
+        
+        Returns:
+            Estoque: Objeto de estoque atualizado
+        
+        Raises:
+            ValueError: Se produto não encontrado
+        """
         try:
-            produto = Produto.objects.get(idPRODUTO=produto_id)
+            # ✅ Buscar produto (novo nome)
+            produto = Produto.objects.get(id=produto_id)  # ✅ Novo nome
         except Produto.DoesNotExist:
             raise ValueError("Produto não encontrado")
         
-        estoque, created = Estoque.objects.get_or_create(
-            PRODUTO_idPRODUTO=produto,
-            defaults={'QTD_DISPONIVEL': 0}
+        # ✅ Buscar ou criar estoque (novos nomes)
+        estoque, _ = Estoque.objects.get_or_create(
+            produto=produto,  # ✅ Novo nome
+            defaults={'quantidade_disponivel': 0}  # ✅ Novo nome
         )
         
-        estoque.QTD_DISPONIVEL += quantidade
-        estoque.save()
-        
-        print(f"[ESTOQUE SERVICE] Estoque atualizado. Quantidade atual: {estoque.QTD_DISPONIVEL}")
+        # ✅ Usar método do model
+        estoque.adicionar(quantidade)
         
         return estoque
     
     @staticmethod
     @transaction.atomic
     def atualizar_produto(produto_id, dados):
-        """Atualiza informações completas de um produto"""
-        print(f"[ESTOQUE SERVICE] Atualizando produto {produto_id}")
+        """
+        Atualiza informações de um produto
         
+        Args:
+            produto_id (int): ID do produto
+            dados (dict): Dados atualizados
+        
+        Returns:
+            Produto: Produto atualizado
+        
+        Raises:
+            ValueError: Se produto não encontrado
+        """
         try:
-            produto = Produto.objects.get(idPRODUTO=produto_id)
+            # ✅ Buscar produto (novo nome)
+            produto = Produto.objects.get(id=produto_id)  # ✅ Novo nome
         except Produto.DoesNotExist:
             raise ValueError("Produto não encontrado")
         
-        # Atualizar produto
-        produto.DESCRICAO = dados.get('nome', produto.DESCRICAO)
-        produto.VLR_UNIT = str(dados.get('preco_venda', produto.VLR_UNIT))
-        produto.IOF = str(dados.get('preco_custo', produto.IOF))
-        # Atualizar flag de serviço/controle de estoque se informado
-        if 'is_service' in dados:
-            produto.TRACK_STOCK = (not bool(dados.get('is_service')))
-        produto.save()
+        # ✅ Atualizar produto (novos nomes)
+        produto.descricao = dados.get('nome', produto.descricao)  # ✅ Novo nome
+        produto.preco_unitario = Decimal(str(dados.get('preco_venda', produto.preco_unitario)))  # ✅ Novo nome
+        produto.iof = Decimal(str(dados.get('preco_custo', produto.iof)))  # ✅ Novo nome
         
-        print(f"[ESTOQUE SERVICE] Produto atualizado: {produto.DESCRICAO}")
+        # Atualizar flag de controle de estoque se informado
+        if 'is_service' in dados:
+            produto.controlar_estoque = (not bool(dados.get('is_service')))  # ✅ Novo nome
+        
+        produto.save()
         
         # Atualizar estoque se necessário
         if 'quantidade' in dados:
-            estoque = Estoque.objects.filter(PRODUTO_idPRODUTO=produto).first()
+            estoque = Estoque.objects.filter(produto=produto).first()  # ✅ Novo nome
             if estoque:
-                estoque.QTD_DISPONIVEL = int(dados['quantidade'])
+                estoque.quantidade_disponivel = int(dados['quantidade'])  # ✅ Novo nome
                 estoque.save()
-                print(f"[ESTOQUE SERVICE] Estoque atualizado: {estoque.QTD_DISPONIVEL}")
         
         return produto
     
     @staticmethod
     def buscar_produto(produto_id):
-        """Busca um produto específico com seu estoque"""
+        """
+        Busca um produto específico com seu estoque
+        
+        Args:
+            produto_id (int): ID do produto
+        
+        Returns:
+            dict: Informações do produto e estoque
+        
+        Raises:
+            ValueError: Se produto não encontrado
+        """
         try:
-            produto = Produto.objects.only('idPRODUTO', 'DESCRICAO', 'IOF', 'VLR_UNIT', 'TRACK_STOCK').get(idPRODUTO=produto_id)
-            estoque = Estoque.objects.filter(PRODUTO_idPRODUTO=produto).only('idESTOQUE', 'QTD_DISPONIVEL').first()
+            # ✅ Buscar produto (novos nomes)
+            produto = Produto.objects.only(
+                'id', 'descricao', 'iof', 'preco_unitario', 'controlar_estoque'  # ✅ Novos nomes
+            ).get(id=produto_id)  # ✅ Novo nome
+            
+            # ✅ Buscar estoque (novo nome)
+            estoque = Estoque.objects.filter(
+                produto=produto  # ✅ Novo nome
+            ).only('id', 'quantidade_disponivel').first()  # ✅ Novos nomes
             
             return {
                 'produto': produto,
                 'estoque': estoque,
-                'nome': produto.DESCRICAO,
-                'preco_custo': float(produto.IOF) if produto.IOF else 0.0,
-                'preco_venda': float(produto.VLR_UNIT) if produto.VLR_UNIT else 0.0,
-                'quantidade': estoque.QTD_DISPONIVEL if estoque else 0,
-                'is_service': not bool(produto.TRACK_STOCK)
+                'nome': produto.descricao,  # ✅ Novo nome
+                'preco_custo': float(produto.iof) if produto.iof else 0.0,  # ✅ Novo nome
+                'preco_venda': float(produto.preco_unitario),  # ✅ Novo nome
+                'quantidade': estoque.quantidade_disponivel if estoque else 0,  # ✅ Novo nome
+                'is_service': not bool(produto.controlar_estoque)  # ✅ Novo nome
             }
         except Produto.DoesNotExist:
             raise ValueError("Produto não encontrado")
@@ -142,18 +199,25 @@ class EstoqueService:
     @staticmethod
     @transaction.atomic
     def deletar_produto(produto_id):
-        """Deleta um produto e seu estoque"""
+        """
+        Deleta um produto e seu estoque
+        
+        Args:
+            produto_id (int): ID do produto
+        
+        Returns:
+            str: Nome do produto deletado
+        
+        Raises:
+            ValueError: Se produto não encontrado
+        """
         try:
-            produto = Produto.objects.get(idPRODUTO=produto_id)
-            nome = produto.DESCRICAO
+            # ✅ Buscar produto (novo nome)
+            produto = Produto.objects.get(id=produto_id)  # ✅ Novo nome
+            nome = produto.descricao  # ✅ Novo nome
             
-            # Deletar estoque associado
-            Estoque.objects.filter(PRODUTO_idPRODUTO=produto).delete()
-            
-            # Deletar produto
+            # Deletar (CASCADE deleta estoque automaticamente)
             produto.delete()
-            
-            print(f"[ESTOQUE SERVICE] Produto '{nome}' (ID: {produto_id}) deletado do banco")
             
             return nome
         except Produto.DoesNotExist:

@@ -1,0 +1,194 @@
+{% extends 'core/base.html' %}
+{% load static %}
+
+{% block title %}Histórico de Vendas{% endblock %}
+
+{% block dashboard_content %}
+<link rel="stylesheet" href="{% static 'css/vendas.css' %}">
+
+<div class="header-vendas">
+    <h1>Histórico de Vendas</h1>
+    <div class="header-right">
+        <form id="form-filtro" method="GET" class="filtro-form">
+            <div class="filtro-group">
+                <label>Buscar Cliente:</label>
+                <input type="text" name="busca_nome" id="busca-nome" class="input-busca"
+                       value="{% if busca_nome %}{{ busca_nome }}{% endif %}"
+                       placeholder="Digite o nome ou CPF">
+            </div>
+            
+            <div class="filtro-group">
+                <label>De:</label>
+                <input type="date" name="data_inicio" id="data-inicio" class="input-data"
+                       value="{% if data_inicio %}{{ data_inicio }}{% endif %}">
+            </div>
+            <div class="filtro-group">
+                <label>Até:</label>
+                <input type="date" name="data_fim" id="data-fim" class="input-data"
+                       value="{% if data_fim %}{{ data_fim }}{% endif %}">
+            </div>
+            
+            <button type="submit" class="btn-filtrar">Filtrar</button>
+            <button type="button" class="btn-limpar" onclick="vendasList.limparFiltros()">Limpar</button>
+        </form>
+    </div>
+</div>
+
+<div id="barra-selecao" class="barra-selecao" style="display: none;">
+    <div class="selecao-info">
+        <span id="contador-selecionados">0</span> venda(s) selecionada(s)
+    </div>
+    <div class="selecao-acoes">
+        <button class="btn-deletar-multiplas" onclick="vendasList.deletarSelecionadas()">
+            Deletar Selecionados
+        </button>
+        <button class="btn-cancelar" onclick="vendasList.cancelarSelecao()">
+            Cancelar
+        </button>
+    </div>
+</div>
+
+{% if data_inicio or data_fim or busca_nome %}
+<div class="filtros-ativos">
+    <span class="badge-filtro">
+        Filtros ativos: 
+        {% if busca_nome %}Busca: "{{ busca_nome }}"{% endif %}
+        {% if data_inicio %}de {{ data_inicio|date:"d/m/Y" }}{% endif %}
+        {% if data_fim %}até {{ data_fim|date:"d/m/Y" }}{% endif %}
+    </span>
+    <span class="total-resultados">{{ vendas.count }} venda(s) encontrada(s)</span>
+</div>
+{% endif %}
+
+<div class="card-vendas">
+    {% if vendas %}
+        <table class="tabela-vendas">
+            <thead>
+                <tr>
+                    <th style="width: 40px;">
+                        <input type="checkbox" id="selecionar-todos" onchange="vendasList.selecionarTodas(this)">
+                    </th>
+                    <th>Nº Venda</th>
+                    <th>Nº Orçamento</th>
+                    <th>Cliente</th>
+                    <th>Data</th>
+                    <th>Qtd. Itens</th>
+                    <th>Valor Total</th>
+                    <th>Forma Pgto.</th>
+                    <th style="text-align: center;">Ações</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for venda in vendas %}
+                {% with venda_formatada="V-"|add:venda.id|stringformat:'05d' %}
+                <tr>
+                    <td>
+                        <input type="checkbox" class="checkbox-venda" value="{{ venda.id }}"
+                            onchange="vendasList.atualizarSelecao()">
+                    </td>
+
+                    <td><strong>{{ venda_formatada }}</strong></td>
+                    
+                    <td>
+                        {% if venda.orcamento_origem %}
+                            <span style="background: #e7f3ff; color: #0066cc; padding: 4px 8px; border-radius: 3px; font-weight: bold;">
+                                OR-{{ venda.orcamento_origem.id|stringformat:'05d' }}
+                            </span>
+                        {% else %}
+                            <span style="color: #999;">-</span>
+                        {% endif %}
+                    </td>
+                    
+                    <td>{{ venda.cliente.nome }}</td>
+                    <td>{{ venda.data_venda|date:"d/m/Y" }}</td>
+                    <td>{{ venda.quantidade_itens }}</td>
+                    <td>R$ {{ venda.total|floatformat:2 }}</td>
+                    <td>{{ venda.forma_pagamento.nome }}</td>
+
+                    <td style="text-align: center;">
+                        <button class="btn-acao btn-detalhes" 
+                                onclick="vendasList.verDetalhes('{{ venda.id }}')"
+                                title="Ver Detalhes">
+                            <i class="fas fa-eye"></i>
+                        </button>
+
+                        <a href="{% url 'gerar_pdf_venda' venda.id %}"
+                           class="btn-acao btn-imprimir"
+                           target="_blank"
+                           title="Reimprimir Nota">
+                            <i class="fas fa-print"></i>
+                        </a>
+
+                        <button class="btn-acao btn-deletar"
+                                onclick="vendasList.deletarVenda('{{ venda.id }}', '{{ venda_formatada }}')"
+                                title="Deletar Venda">
+                            <i class="fas fa-trash-alt"></i>
+                        </button>
+                    </td>
+                </tr>
+                {% endwith %}
+                {% endfor %}
+            </tbody>
+        </table>
+    {% else %}
+        <div class="empty-state">
+            <i class="fas fa-inbox"></i>
+            <p>Nenhuma venda encontrada</p>
+        </div>
+    {% endif %}
+</div>
+
+<div id="modal-detalhes" class="modal-overlay" style="display: none;">
+    <div class="modal-box">
+        <div class="modal-header">
+            <h2>Detalhes da Venda</h2>
+            <button class="btn-fechar" onclick="vendasList.fecharModal()">&times;</button>
+        </div>
+        <div id="modal-content" class="modal-body">
+            <p>Carregando...</p>
+        </div>
+    </div>
+</div>
+
+<script id="vendas-data" type="application/json">
+[
+    {% for venda in vendas %}
+    {
+        "id": {{ venda.id }},
+        "idFormatado": "V-{{ venda.id|stringformat:"05d" }}",
+        "orcamentoOrigem": {% if venda.orcamento_origem %}"OR-{{ venda.orcamento_origem.id|stringformat:'05d' }}"{% else %}null{% endif %},
+        "data": "{{ venda.data_venda|date:"d/m/Y H:i" }}",
+        "cliente": "{{ venda.cliente.nome|escapejs }}",
+        "cpf": "{{ venda.cliente.cpf|escapejs }}",
+        "telefone": "{{ venda.cliente.telefone|escapejs }}",
+        "quantidade": {{ venda.quantidade_itens|default:0 }},
+        "subtotal": "{{ venda.subtotal|default:0|floatformat:2 }}",
+        "desconto": "{{ venda.desconto|default:0|floatformat:2 }}",
+        "frete": "{{ venda.frete|default:0|floatformat:2 }}",
+        "valorTotal": "{{ venda.total|default:0|floatformat:2 }}",
+        "formaPagamento": "{{ venda.forma_pagamento.nome|escapejs }}",
+        "urlPdf": "{% url 'gerar_pdf_venda' venda.id %}",
+        "itens": [
+            {% for item in venda.itens.all %}
+            {
+                "produto": "{{ item.produto.descricao|default:item.produto|escapejs }}",
+                "qtd": "{{ item.quantidade|floatformat:0 }}",
+                "unitario": "{{ item.preco_unitario|floatformat:2 }}",
+                "total": "{{ item.total|floatformat:2 }}"
+            }{% if not forloop.last %},{% endif %}
+            {% endfor %}
+        ]
+        ,"observacao": "{{ venda.observacao|default:''|escapejs }}"
+    }{% if not forloop.last %},{% endif %}
+    {% endfor %}
+]
+</script>
+
+{% endblock %}
+
+{% block scripts %}
+<script src="{% static 'js/vendas-list.js' %}"></script>
+{% endblock %}
+
+
+

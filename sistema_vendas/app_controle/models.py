@@ -303,7 +303,7 @@ class Produto(TimeStampedModel):
     """Produtos disponíveis para venda"""
     descricao = models.CharField(max_length=120, verbose_name='Descrição')
     preco_unitario = models.DecimalField(
-        max_digits=10,
+        max_digits=12,
         decimal_places=2,
         verbose_name='Preço Unitário'
     )

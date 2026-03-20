@@ -23,7 +23,7 @@ class EstoqueService:
             'id', 'quantidade_disponivel',  # ✅ Novos nomes
             'produto__id', 'produto__descricao',  # ✅ Novos nomes
             'produto__iof', 'produto__preco_unitario'  # ✅ Novos nomes
-        )
+        ).order_by('produto__descricao')
         
         resultado = []
         for estoque in estoques.iterator():

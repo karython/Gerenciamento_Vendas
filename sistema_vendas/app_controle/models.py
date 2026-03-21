@@ -308,7 +308,7 @@ class Produto(TimeStampedModel):
         verbose_name='Preço Unitário'
     )
     iof = models.DecimalField(
-        max_digits=5,
+        max_digits=12,
         decimal_places=2,
         default=Decimal('0.00'),
         verbose_name='IOF (%)'

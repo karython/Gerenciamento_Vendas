@@ -444,25 +444,25 @@ class Orcamento(TimeStampedModel):
     
     # Valores
     subtotal = models.DecimalField(
-        max_digits=10,
+        max_digits=12,
         decimal_places=2,
         default=Decimal('0.00'),
         verbose_name='Subtotal'
     )
     desconto = models.DecimalField(
-        max_digits=10,
+        max_digits=12,
         decimal_places=2,
         default=Decimal('0.00'),
         verbose_name='Desconto'
     )
     frete = models.DecimalField(
-        max_digits=10,
+        max_digits=12,
         decimal_places=2,
         default=Decimal('0.00'),
         verbose_name='Frete'
     )
     total = models.DecimalField(
-        max_digits=10,
+        max_digits=12,
         decimal_places=2,
         verbose_name='Valor Total'
     )
@@ -526,17 +526,17 @@ class ItemOrcamento(models.Model):
         verbose_name='Produto'
     )
     quantidade = models.DecimalField(
-        max_digits=10,
+        max_digits=12,
         decimal_places=2,
         verbose_name='Quantidade'
     )
     preco_unitario = models.DecimalField(
-        max_digits=10,
+        max_digits=12,
         decimal_places=2,
         verbose_name='Preço Unitário'
     )
     total = models.DecimalField(
-        max_digits=10,
+        max_digits=12,
         decimal_places=2,
         verbose_name='Total'
     )
@@ -588,25 +588,25 @@ class Venda(TimeStampedModel):
     
     # Valores
     subtotal = models.DecimalField(
-        max_digits=10,
+        max_digits=12,
         decimal_places=2,
         default=Decimal('0.00'),
         verbose_name='Subtotal'
     )
     desconto = models.DecimalField(
-        max_digits=10,
+        max_digits=12,
         decimal_places=2,
         default=Decimal('0.00'),
         verbose_name='Desconto'
     )
     frete = models.DecimalField(
-        max_digits=10,
+        max_digits=12,
         decimal_places=2,
         default=Decimal('0.00'),
         verbose_name='Frete'
     )
     total = models.DecimalField(
-        max_digits=10,
+        max_digits=12,
         decimal_places=2,
         verbose_name='Valor Total'
     )
@@ -665,12 +665,12 @@ class ItemVenda(models.Model):
     )
     quantidade = models.IntegerField(verbose_name='Quantidade')
     preco_unitario = models.DecimalField(
-        max_digits=10,
+        max_digits=12,
         decimal_places=2,
         verbose_name='Preço Unitário'
     )
     total = models.DecimalField(
-        max_digits=10,
+        max_digits=12,
         decimal_places=2,
         verbose_name='Total'
     )

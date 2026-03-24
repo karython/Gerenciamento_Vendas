@@ -120,11 +120,10 @@ def criar_venda(request):
 def gerar_pdf_venda(request, venda_id):
     """Gera PDF do recibo de venda"""
     try:
-        # ✅ Buscar venda com novos nomes de campos
         venda = Venda.objects.select_related(
-            'cliente',  # ✅ Novo nome
-            'forma_pagamento'  # ✅ Novo nome
-        ).prefetch_related('itens__produto').get(id=venda_id)  # ✅ Novos nomes
+            'cliente',
+            'forma_pagamento'
+        ).prefetch_related('itens__produto').get(id=venda_id)
         
         loja = AuthService.loja_logada(request)
         
@@ -165,20 +164,20 @@ def gerar_pdf_venda(request, venda_id):
         
         if not logo_encontrada:
             c.setFont("Helvetica-Bold", 18)
-            c.drawString(margem_esq + 20, y + 40, loja.nome[:15].upper())  # ✅ Novo nome
+            c.drawString(margem_esq + 20, y + 40, loja.nome[:15].upper())
         
         # Dados da Loja
         c.setFont("Helvetica-Bold", 10)
         x_contato = margem_esq + (largura_util / 2) + 20
         y_contato = y + 75
         
-        c.drawString(x_contato, y_contato, f"{loja.nome}")  # ✅ Novo nome
+        c.drawString(x_contato, y_contato, f"{loja.nome}")
         y_contato -= 15
-        c.drawString(x_contato, y_contato, f"{loja.telefone}")  # ✅ Novo nome
+        c.drawString(x_contato, y_contato, f"{loja.telefone}")
         y_contato -= 15
-        c.drawString(x_contato, y_contato, f"{loja.cnpj}")  # ✅ Novo nome
+        c.drawString(x_contato, y_contato, f"{loja.cnpj}")
         y_contato -= 15
-        c.drawString(x_contato, y_contato, f"{loja.email}")  # ✅ Novo nome
+        c.drawString(x_contato, y_contato, f"{loja.email}")
         
         # --- DADOS DO CLIENTE ---
         y -= 30
@@ -186,13 +185,13 @@ def gerar_pdf_venda(request, venda_id):
         c.setFont("Helvetica-Bold", 10)
         c.drawString(margem_esq + 10, y, "Data:")
         c.setFont("Helvetica", 10)
-        c.drawString(margem_esq + 45, y, venda.data_venda.strftime('%d/%m/%Y'))  # ✅ Novo nome
+        c.drawString(margem_esq + 45, y, venda.data_venda.strftime('%d/%m/%Y'))
         c.line(margem_esq + 40, y - 2, margem_esq + 150, y - 2)
         
         c.setFont("Helvetica-Bold", 10)
         c.drawString(margem_esq + 180, y, "Telefone:")
         c.setFont("Helvetica", 10)
-        c.drawString(margem_esq + 230, y, venda.cliente.telefone)  # ✅ Novo nome
+        c.drawString(margem_esq + 230, y, venda.cliente.telefone)
         c.line(margem_esq + 225, y - 2, margem_esq + 380, y - 2)
         
         y -= 25
@@ -200,7 +199,7 @@ def gerar_pdf_venda(request, venda_id):
         c.setFont("Helvetica-Bold", 10)
         c.drawString(margem_esq + 10, y, "Cliente:")
         c.setFont("Helvetica", 10)
-        c.drawString(margem_esq + 55, y, f"{venda.cliente.nome} (CPF: {venda.cliente.cpf})")  # ✅ Novos nomes
+        c.drawString(margem_esq + 55, y, f"{venda.cliente.nome} (CPF: {venda.cliente.cpf})")
         c.line(margem_esq + 50, y - 2, margem_dir - 10, y - 2)
         
         y -= 25
@@ -211,13 +210,13 @@ def gerar_pdf_venda(request, venda_id):
         c.setFont("Helvetica", 9)
         
         endereco_text = ""
-        enderecos = venda.cliente.enderecos.all()  # ✅ Novo nome (related_name)
+        enderecos = venda.cliente.enderecos.all()
         if enderecos:
             end = enderecos.first()
             endereco_text = (
-                f"{end.logradouro}, {end.numero or 'S/N'} - "  # ✅ Novos nomes
-                f"{end.bairro} - {end.cidade.nome}/{end.cidade.uf.sigla} - "  # ✅ Novos nomes
-                f"CEP: {end.cep}"  # ✅ Novo nome
+                f"{end.logradouro}, {end.numero or 'S/N'} - "
+                f"{end.bairro} - {end.cidade.nome}/{end.cidade.uf.sigla} - "
+                f"CEP: {end.cep}"
             )
         
         c.drawString(margem_esq + 60, y, endereco_text)
@@ -229,9 +228,9 @@ def gerar_pdf_venda(request, venda_id):
         c.drawCentredString(width / 2, y, "RECIBO DE VENDA")
         c.setFont("Helvetica", 10)
         
-        numero_venda = f"Nº V-{venda.id:05d}"  # ✅ Novo nome
-        if venda.orcamento_origem:  # ✅ Novo nome
-            numero_venda += f" | Orçamento: OR-{venda.orcamento_origem.id:05d}"  # ✅ Novo nome
+        numero_venda = f"Nº V-{venda.id:05d}"
+        if venda.orcamento_origem:
+            numero_venda += f" | Orçamento: OR-{venda.orcamento_origem.id:05d}"
         
         c.drawCentredString(width / 2, y - 15, numero_venda)
         
@@ -244,7 +243,7 @@ def gerar_pdf_venda(request, venda_id):
         col_unit = margem_dir - 130
         col_total = margem_dir - 60
         
-        # Cabeçalho
+        # Cabeçalho da tabela
         c.setFillColor(colors.lightgrey)
         c.rect(margem_esq, y - 5, largura_util, 20, fill=1, stroke=1)
         c.setFillColor(colors.black)
@@ -261,13 +260,13 @@ def gerar_pdf_venda(request, venda_id):
         c.setFont("Helvetica", 10)
         altura_linha = 20
         
-        itens = venda.itens.select_related('produto').all()  # ✅ Novos nomes
+        itens = venda.itens.select_related('produto').all()
         
         for item in itens:
-            c.drawString(col_qtd, y - 12, f"{int(item.quantidade)}")  # ✅ Novo nome
-            c.drawString(col_desc, y - 12, str(item.produto.descricao)[:55])  # ✅ Novo nome
-            c.drawString(col_unit, y - 12, f"{float(item.preco_unitario):.2f}")  # ✅ Novo nome
-            c.drawString(col_total, y - 12, f"{float(item.total):.2f}")  # ✅ Novo nome
+            c.drawString(col_qtd, y - 12, f"{int(item.quantidade)}")
+            c.drawString(col_desc, y - 12, str(item.produto.descricao)[:55])
+            c.drawString(col_unit, y - 12, f"{float(item.preco_unitario):.2f}")
+            c.drawString(col_total, y - 12, f"{float(item.total):.2f}")
             
             c.setStrokeColor(colors.grey)
             c.line(margem_esq, y - 15, margem_dir, y - 15)
@@ -275,7 +274,7 @@ def gerar_pdf_venda(request, venda_id):
             
             y -= altura_linha
 
-        # Linhas verticais
+        # Linhas verticais da tabela
         fundo_tabela = y
         c.line(margem_esq, topo_tabela + 15, margem_esq, fundo_tabela + 5)
         c.line(margem_esq + 40, topo_tabela + 15, margem_esq + 40, fundo_tabela + 5)
@@ -283,17 +282,17 @@ def gerar_pdf_venda(request, venda_id):
         c.line(margem_dir - 70, topo_tabela + 15, margem_dir - 70, fundo_tabela + 5)
         c.line(margem_dir, topo_tabela + 15, margem_dir, fundo_tabela + 5)
         
-        # --- INFORMAÇÕES RESUMIDAS ---
+        # --- INFORMAÇÕES DE PAGAMENTO ---
         y -= 25
         c.setFont("Helvetica-Bold", 11)
-        c.drawString(margem_esq + 10, y, f"Forma de Pagamento: {venda.forma_pagamento.nome}")  # ✅ Novo nome
+        c.drawString(margem_esq + 10, y, f"Forma de Pagamento: {venda.forma_pagamento.nome}")
         
-        if venda.parcelamento:  # ✅ Novo nome
+        if venda.parcelamento:
             c.drawString(margem_dir - 200, y, f"Parcelamento: {venda.parcelamento}")
         
         # Observação
         y -= 20
-        if venda.observacao:  # ✅ Novo nome
+        if venda.observacao:
             c.setFont("Helvetica-Bold", 10)
             c.drawString(margem_esq + 10, y, "Observação:")
             y -= 15
@@ -305,30 +304,30 @@ def gerar_pdf_venda(request, venda_id):
         # --- TOTALIZADORES ---
         y -= 30
         c.setFont("Helvetica-Bold", 11)
-        c.drawString(margem_esq + 10, y, f"Subtotal: R$ {float(venda.subtotal):.2f}")  # ✅ Novo nome
+        c.drawString(margem_esq + 10, y, f"Subtotal: R$ {float(venda.subtotal):.2f}")
         
         y -= 20
-        c.drawString(margem_esq + 10, y, f"Desconto: R$ {float(venda.desconto):.2f}")  # ✅ Novo nome
+        c.drawString(margem_esq + 10, y, f"Desconto: R$ {float(venda.desconto):.2f}")
         
         y -= 20
-        c.drawString(margem_esq + 10, y, f"Frete: R$ {float(venda.frete):.2f}")  # ✅ Novo nome
+        c.drawString(margem_esq + 10, y, f"Frete: R$ {float(venda.frete):.2f}")
         
         y -= 25
         c.setFont("Helvetica-Bold", 14)
-        c.rect(margem_dir - 150, y - 5, 140, 20)
-        c.drawRightString(margem_dir - 20, y + 2, f"TOTAL: R$ {float(venda.total):.2f}")  # ✅ Novo nome
+        # ✅ Retângulo removido
+        c.drawRightString(margem_dir - 20, y + 2, f"TOTAL: R$ {float(venda.total):.2f}")
         
-        # Assinaturas
-        y_ass = height - altura_recibo - 40 + 80 
-        c.line(margem_esq + 20, y_ass, margem_esq + 220, y_ass)
+        # --- ASSINATURAS (✅ posição dinâmica, sempre abaixo dos totalizadores) ---
+        y -= 60
+        c.line(margem_esq + 20, y, margem_esq + 220, y)
         c.setFont("Helvetica-Bold", 10)
-        c.drawCentredString(margem_esq + 120, y_ass - 15, "Ass. Comprador")
+        c.drawCentredString(margem_esq + 120, y - 15, "Ass. Comprador")
         
-        c.line(margem_dir - 220, y_ass, margem_dir - 20, y_ass)
-        c.drawCentredString(margem_dir - 120, y_ass - 15, "Assinatura Loja")
+        c.line(margem_dir - 220, y, margem_dir - 20, y)
+        c.drawCentredString(margem_dir - 120, y - 15, "Assinatura Loja")
 
-        # Rodapé
-        y -= 50
+        # --- RODAPÉ ---
+        y -= 40
         c.setFont("Helvetica-Oblique", 8)
         c.drawString(margem_esq + 10, y, "Obrigado pela preferência!")
         

@@ -272,11 +272,10 @@ def converter_orcamento_venda(request, orcamento_id):
 def gerar_pdf_orcamento(request, orcamento_id):
     """Gera PDF do orçamento"""
     try:
-        # ✅ Buscar orçamento com novos nomes
         orcamento = Orcamento.objects.select_related(
-            'cliente',  # ✅ Novo nome
-            'forma_pagamento'  # ✅ Novo nome
-        ).prefetch_related('itens__produto').get(id=orcamento_id)  # ✅ Novos nomes
+            'cliente',
+            'forma_pagamento'
+        ).prefetch_related('itens__produto').get(id=orcamento_id)
         
         loja = AuthService.loja_logada(request)
         
@@ -300,7 +299,7 @@ def gerar_pdf_orcamento(request, orcamento_id):
         y -= altura_header
         c.rect(margem_esq, y, largura_util, altura_header)
         
-        # Logo (mesmo código da venda)
+        # Logo
         logo_paths = [
             os.path.join(settings.BASE_DIR, 'app_controle', 'static', 'img', 'logoFundo.png'),
             os.path.join(settings.STATIC_ROOT, 'img', 'logoFundo.png') if hasattr(settings, 'STATIC_ROOT') else None,
@@ -317,20 +316,20 @@ def gerar_pdf_orcamento(request, orcamento_id):
         
         if not logo_encontrada:
             c.setFont("Helvetica-Bold", 18)
-            c.drawString(margem_esq + 20, y + 40, loja.nome[:15].upper())  # ✅ Novo nome
+            c.drawString(margem_esq + 20, y + 40, loja.nome[:15].upper())
         
         # Dados da Loja
         c.setFont("Helvetica-Bold", 10)
         x_contato = margem_esq + (largura_util / 2) + 20
         y_contato = y + 75
         
-        c.drawString(x_contato, y_contato, f"{loja.nome}")  # ✅ Novo nome
+        c.drawString(x_contato, y_contato, f"{loja.nome}")
         y_contato -= 15
-        c.drawString(x_contato, y_contato, f"{loja.telefone}")  # ✅ Novo nome
+        c.drawString(x_contato, y_contato, f"{loja.telefone}")
         y_contato -= 15
-        c.drawString(x_contato, y_contato, f"{loja.cnpj}")  # ✅ Novo nome
+        c.drawString(x_contato, y_contato, f"{loja.cnpj}")
         y_contato -= 15
-        c.drawString(x_contato, y_contato, f"{loja.email}")  # ✅ Novo nome
+        c.drawString(x_contato, y_contato, f"{loja.email}")
         
         # --- DADOS DO CLIENTE ---
         y -= 30
@@ -338,13 +337,13 @@ def gerar_pdf_orcamento(request, orcamento_id):
         c.setFont("Helvetica-Bold", 10)
         c.drawString(margem_esq + 10, y, "Data:")
         c.setFont("Helvetica", 10)
-        c.drawString(margem_esq + 45, y, orcamento.data_orcamento.strftime('%d/%m/%Y'))  # ✅ Novo nome
+        c.drawString(margem_esq + 45, y, orcamento.data_orcamento.strftime('%d/%m/%Y'))
         c.line(margem_esq + 40, y - 2, margem_esq + 150, y - 2)
         
         c.setFont("Helvetica-Bold", 10)
         c.drawString(margem_esq + 180, y, "Telefone:")
         c.setFont("Helvetica", 10)
-        c.drawString(margem_esq + 230, y, orcamento.cliente.telefone)  # ✅ Novo nome
+        c.drawString(margem_esq + 230, y, orcamento.cliente.telefone)
         c.line(margem_esq + 225, y - 2, margem_esq + 380, y - 2)
         
         y -= 25
@@ -352,7 +351,7 @@ def gerar_pdf_orcamento(request, orcamento_id):
         c.setFont("Helvetica-Bold", 10)
         c.drawString(margem_esq + 10, y, "Cliente:")
         c.setFont("Helvetica", 10)
-        c.drawString(margem_esq + 55, y, f"{orcamento.cliente.nome} (CPF: {orcamento.cliente.cpf})")  # ✅ Novos nomes
+        c.drawString(margem_esq + 55, y, f"{orcamento.cliente.nome} (CPF: {orcamento.cliente.cpf})")
         c.line(margem_esq + 50, y - 2, margem_dir - 10, y - 2)
         
         y -= 25
@@ -363,13 +362,13 @@ def gerar_pdf_orcamento(request, orcamento_id):
         c.setFont("Helvetica", 9)
         
         endereco_text = ""
-        enderecos = orcamento.cliente.enderecos.all()  # ✅ Novo nome
+        enderecos = orcamento.cliente.enderecos.all()
         if enderecos:
             end = enderecos.first()
             endereco_text = (
-                f"{end.logradouro}, {end.numero or 'S/N'} - "  # ✅ Novos nomes
-                f"{end.bairro} - {end.cidade.nome}/{end.cidade.uf.sigla} - "  # ✅ Novos nomes
-                f"CEP: {end.cep}"  # ✅ Novo nome
+                f"{end.logradouro}, {end.numero or 'S/N'} - "
+                f"{end.bairro} - {end.cidade.nome}/{end.cidade.uf.sigla} - "
+                f"CEP: {end.cep}"
             )
         
         c.drawString(margem_esq + 60, y, endereco_text)
@@ -380,7 +379,7 @@ def gerar_pdf_orcamento(request, orcamento_id):
         c.setFont("Helvetica-Bold", 18)
         c.drawCentredString(width / 2, y, "ORÇAMENTO")
         c.setFont("Helvetica", 10)
-        c.drawCentredString(width / 2, y - 15, f"Nº OR-{orcamento.id:05d}")  # ✅ Novo nome
+        c.drawCentredString(width / 2, y - 15, f"Nº OR-{orcamento.id:05d}")
         
         # Status
         status_map = {
@@ -389,7 +388,7 @@ def gerar_pdf_orcamento(request, orcamento_id):
             'REJEITADO': 'REJEITADO',
             'CONVERTIDO': 'CONVERTIDO EM VENDA'
         }
-        status_texto = status_map.get(orcamento.status, orcamento.status)  # ✅ Novo nome
+        status_texto = status_map.get(orcamento.status, orcamento.status)
         c.setFont("Helvetica", 9)
         c.drawCentredString(width / 2, y - 28, f"Status: {status_texto}")
         
@@ -419,13 +418,13 @@ def gerar_pdf_orcamento(request, orcamento_id):
         c.setFont("Helvetica", 10)
         altura_linha = 20
         
-        itens = orcamento.itens.select_related('produto').all()  # ✅ Novos nomes
+        itens = orcamento.itens.select_related('produto').all()
         
         for item in itens:
-            c.drawString(col_qtd, y - 12, f"{float(item.quantidade):.0f}")  # ✅ Novo nome
-            c.drawString(col_desc, y - 12, str(item.produto.descricao)[:55])  # ✅ Novo nome
-            c.drawString(col_unit, y - 12, f"{float(item.preco_unitario):.2f}")  # ✅ Novo nome
-            c.drawString(col_total, y - 12, f"{float(item.total):.2f}")  # ✅ Novo nome
+            c.drawString(col_qtd, y - 12, f"{float(item.quantidade):.0f}")
+            c.drawString(col_desc, y - 12, str(item.produto.descricao)[:55])
+            c.drawString(col_unit, y - 12, f"{float(item.preco_unitario):.2f}")
+            c.drawString(col_total, y - 12, f"{float(item.total):.2f}")
             
             c.setStrokeColor(colors.grey)
             c.line(margem_esq, y - 15, margem_dir, y - 15)
@@ -433,7 +432,7 @@ def gerar_pdf_orcamento(request, orcamento_id):
             
             y -= altura_linha
 
-        # Linhas verticais
+        # Linhas verticais da tabela
         fundo_tabela = y
         c.line(margem_esq, topo_tabela + 15, margem_esq, fundo_tabela + 5)
         c.line(margem_esq + 40, topo_tabela + 15, margem_esq + 40, fundo_tabela + 5)
@@ -441,17 +440,17 @@ def gerar_pdf_orcamento(request, orcamento_id):
         c.line(margem_dir - 70, topo_tabela + 15, margem_dir - 70, fundo_tabela + 5)
         c.line(margem_dir, topo_tabela + 15, margem_dir, fundo_tabela + 5)
         
-        # --- INFORMAÇÕES RESUMIDAS ---
+        # --- INFORMAÇÕES DE PAGAMENTO ---
         y -= 25
         c.setFont("Helvetica-Bold", 11)
-        c.drawString(margem_esq + 10, y, f"Forma de Pagamento: {orcamento.forma_pagamento.nome}")  # ✅ Novo nome
+        c.drawString(margem_esq + 10, y, f"Forma de Pagamento: {orcamento.forma_pagamento.nome}")
         
-        if orcamento.parcelamento:  # ✅ Novo nome
+        if orcamento.parcelamento:
             c.drawString(margem_dir - 200, y, f"Parcelamento: {orcamento.parcelamento}")
         
         # Observação
         y -= 20
-        if orcamento.observacao:  # ✅ Novo nome
+        if orcamento.observacao:
             c.setFont("Helvetica-Bold", 10)
             c.drawString(margem_esq + 10, y, "Observação:")
             y -= 15
@@ -463,30 +462,30 @@ def gerar_pdf_orcamento(request, orcamento_id):
         # --- TOTALIZADORES ---
         y -= 30
         c.setFont("Helvetica-Bold", 11)
-        c.drawString(margem_esq + 10, y, f"Subtotal: R$ {float(orcamento.subtotal):.2f}")  # ✅ Novo nome
+        c.drawString(margem_esq + 10, y, f"Subtotal: R$ {float(orcamento.subtotal):.2f}")
         
         y -= 20
-        c.drawString(margem_esq + 10, y, f"Desconto: R$ {float(orcamento.desconto):.2f}")  # ✅ Novo nome
+        c.drawString(margem_esq + 10, y, f"Desconto: R$ {float(orcamento.desconto):.2f}")
         
         y -= 20
-        c.drawString(margem_esq + 10, y, f"Frete: R$ {float(orcamento.frete):.2f}")  # ✅ Novo nome
+        c.drawString(margem_esq + 10, y, f"Frete: R$ {float(orcamento.frete):.2f}")
         
         y -= 25
         c.setFont("Helvetica-Bold", 14)
-        c.rect(margem_dir - 150, y - 5, 140, 20)
-        c.drawRightString(margem_dir - 20, y + 2, f"TOTAL: R$ {float(orcamento.total):.2f}")  # ✅ Novo nome
-        
-        # Assinaturas
-        y_ass = height - altura_recibo - 40 + 80 
-        c.line(margem_esq + 20, y_ass, margem_esq + 220, y_ass)
-        c.setFont("Helvetica-Bold", 10)
-        c.drawCentredString(margem_esq + 120, y_ass - 15, "Ass. Comprador")
-        
-        c.line(margem_dir - 220, y_ass, margem_dir - 20, y_ass)
-        c.drawCentredString(margem_dir - 120, y_ass - 15, "Assinatura Loja")
+        # ✅ Retângulo removido
+        c.drawRightString(margem_dir - 20, y + 2, f"TOTAL: R$ {float(orcamento.total):.2f}")
 
-        # Rodapé
-        y -= 50
+        # --- ASSINATURAS (✅ posição dinâmica, sempre abaixo dos totalizadores) ---
+        y -= 60
+        c.line(margem_esq + 20, y, margem_esq + 220, y)
+        c.setFont("Helvetica-Bold", 10)
+        c.drawCentredString(margem_esq + 120, y - 15, "Ass. Comprador")
+        
+        c.line(margem_dir - 220, y, margem_dir - 20, y)
+        c.drawCentredString(margem_dir - 120, y - 15, "Assinatura Loja")
+
+        # --- RODAPÉ ---
+        y -= 40
         c.setFont("Helvetica-Oblique", 8)
         c.drawString(margem_esq + 10, y, "Este orçamento é válido por 30 dias.")
         y -= 15

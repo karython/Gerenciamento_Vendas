@@ -288,6 +288,13 @@ body {
     font-size: 15px;
 }
 
+.form-control-obs {
+    width: 100%;
+    padding: 10px;
+    border: 1px solid var(--cor-borda);
+    border-radius: 6px;
+    font-size: 25px;
+}
 .form-row {
     display: flex;
     gap: 20px;

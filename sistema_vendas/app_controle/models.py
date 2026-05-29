@@ -196,12 +196,12 @@ class Cliente(TimeStampedModel):
         verbose_name='Data de Nascimento'
     )
     cpf = models.CharField(
-        max_length=14,
+        max_length=50,
         unique=True,
-        verbose_name='CPF',
+        verbose_name='CPF/CNPJ',
         validators=[RegexValidator(
-            r'^\d{3}\.\d{3}\.\d{3}-\d{2}$',
-            'CPF inválido. Use o formato: 000.000.000-00'
+            r'^(\d{3}\.\d{3}\.\d{3}-\d{2}|\d{2}\.\d{3}\.\d{3}/\d{4}-\d{2})$',
+            'CPF/CNPJ inválido. Use 000.000.000-00 (CPF) ou 00.000.000/0000-00 (CNPJ)'
         )]
     )
     telefone = models.CharField(max_length=20, verbose_name='Telefone')

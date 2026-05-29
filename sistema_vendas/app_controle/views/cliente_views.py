@@ -109,7 +109,6 @@ def editar_cliente(request, id):
                 for err in error:
                     messages.error(request, err)
     else:
-        # ✅ Preencher form com dados do cliente
         initial_data = {
             'nome': cliente.nome,
             'cpf': cliente.cpf,
@@ -117,22 +116,26 @@ def editar_cliente(request, id):
             'email': cliente.email,
             'data_nascimento': cliente.data_nascimento,
         }
-        
-        # Preencher endereço se existir
-        endereco = cliente.enderecos.filter(principal=True).first()
+
+        endereco = cliente.enderecos.select_related('cidade__uf').filter(principal=True).first()
         if endereco:
             initial_data.update({
                 'logradouro': endereco.logradouro,
                 'numero': endereco.numero,
                 'bairro': endereco.bairro,
                 'cep': endereco.cep,
+                'cidade': endereco.cidade.nome,
+                'estado': endereco.cidade.uf.sigla,
             })
-        
+
         form = ClienteForm(initial=initial_data, instance=cliente)
-    
+
+    endereco = cliente.enderecos.select_related('cidade__uf').filter(principal=True).first()
+
     return render(request, 'clientes/editar_cliente.html', {
         'form': form,
         'cliente': cliente,
+        'endereco': endereco,
         'loja': loja
     })
 

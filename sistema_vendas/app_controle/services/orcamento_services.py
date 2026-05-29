@@ -128,6 +128,92 @@ class OrcamentoService:
         return orcamento
     
     @staticmethod
+    @transaction.atomic
+    def atualizar_orcamento(orcamento_id, dados):
+        """
+        Atualiza um orçamento existente (itens, valores, forma de pagamento).
+        Não permitido para orçamentos CONVERTIDOS.
+        """
+        try:
+            orcamento = Orcamento.objects.get(id=orcamento_id)
+        except Orcamento.DoesNotExist:
+            raise ValueError(f'Orçamento #{orcamento_id} não encontrado')
+
+        if orcamento.status == 'CONVERTIDO':
+            raise ValueError('Não é possível editar um orçamento já convertido em venda')
+
+        try:
+            cliente = Cliente.objects.get(id=dados['cliente_id'])
+        except Cliente.DoesNotExist:
+            raise ValueError('Cliente não encontrado')
+
+        try:
+            pagamento = FormaPagamento.objects.get(id=dados['forma_pagamento_id'])
+        except FormaPagamento.DoesNotExist:
+            raise ValueError('Forma de pagamento não encontrada')
+
+        if not dados.get('itens') or len(dados['itens']) == 0:
+            raise ValueError('É necessário pelo menos um item no orçamento')
+
+        vlr_subtotal = Decimal(str(dados.get('subtotal', 0)))
+        desconto = Decimal(str(dados.get('desconto', 0)))
+        vlr_frete = Decimal(str(dados.get('frete', 0)))
+        vlr_total = Decimal(str(dados.get('total', 0)))
+
+        if desconto < 0:
+            raise ValueError('O desconto não pode ser negativo')
+        if desconto > vlr_subtotal:
+            raise ValueError('O desconto não pode ser maior que o subtotal')
+        if vlr_frete < 0:
+            raise ValueError('O valor do frete não pode ser negativo')
+
+        observacao = dados.get('observacao', '') or ''
+        if len(str(observacao)) > 3000:
+            raise ValueError('Observação não pode ter mais que 3000 caracteres')
+
+        orcamento.cliente = cliente
+        orcamento.forma_pagamento = pagamento
+        orcamento.subtotal = vlr_subtotal
+        orcamento.desconto = desconto
+        orcamento.frete = vlr_frete
+        orcamento.total = vlr_total
+        orcamento.parcelamento = dados.get('parcelamento', '')
+        orcamento.observacao = observacao
+        orcamento.save()
+
+        # Substituir todos os itens
+        orcamento.itens.all().delete()
+
+        produto_ids = [i['produto_id'] for i in dados['itens']]
+        produtos_map = {
+            p.id: p for p in Produto.objects.filter(id__in=produto_ids).only(
+                'id', 'descricao', 'preco_unitario'
+            )
+        }
+
+        for item_data in dados['itens']:
+            produto = produtos_map.get(item_data['produto_id'])
+            if not produto:
+                raise ValueError(f"Produto ID {item_data['produto_id']} não encontrado")
+
+            quantidade = Decimal(str(item_data['quantidade']))
+            valor_unitario = Decimal(str(item_data['valor_unitario']))
+            valor_total = Decimal(str(item_data['valor_total']))
+
+            if quantidade <= 0:
+                raise ValueError(f'Quantidade inválida para o produto {produto.descricao}')
+
+            ItemOrcamento.objects.create(
+                orcamento=orcamento,
+                produto=produto,
+                quantidade=quantidade,
+                preco_unitario=valor_unitario,
+                total=valor_total
+            )
+
+        return orcamento
+
+    @staticmethod
     def listar_orcamentos(filtros=None):
         """
         Lista orçamentos com filtros opcionais

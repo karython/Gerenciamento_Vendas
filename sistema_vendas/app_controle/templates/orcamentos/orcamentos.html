@@ -101,25 +101,32 @@
                     </td>
                     
                     <td style="text-align: center;">
-                        <a href="#" class="btn-acao btn-detalhes" 
+                        <a href="#" class="btn-acao btn-detalhes"
                            onclick="verDetalhes({{ orcamento.id }}); return false;" title="Ver Detalhes">
                             <i class="fas fa-eye"></i>
                         </a>
-                        
-                        <a href="{% url 'gerar_pdf_orcamento' orcamento.id %}" 
+
+                        <a href="{% url 'gerar_pdf_orcamento' orcamento.id %}"
                            class="btn-acao btn-pdf" target="_blank" title="Baixar PDF">
                             <i class="fas fa-file-pdf"></i>
                         </a>
-                        
+
                         {% if orcamento.status != 'CONVERTIDO' %}
-                        <a href="#" class="btn-acao btn-converter" 
+                        <a href="{% url 'editar_orcamento' orcamento.id %}"
+                           class="btn-acao btn-editar" title="Editar Orçamento">
+                            <i class="fas fa-edit"></i>
+                        </a>
+                        {% endif %}
+
+                        {% if orcamento.status != 'CONVERTIDO' %}
+                        <a href="#" class="btn-acao btn-converter"
                            onclick="abrirConverterModal({{ orcamento.id }}); return false;"
                            title="Converter em Venda">
                             <i class="fas fa-exchange-alt"></i>
                         </a>
                         {% endif %}
-                        
-                        <a href="#" class="btn-acao btn-deletar" 
+
+                        <a href="#" class="btn-acao btn-deletar"
                            onclick="deletarOrcamento({{ orcamento.id }}); return false;"
                            title="Deletar Orçamento">
                             <i class="fas fa-trash-alt"></i>

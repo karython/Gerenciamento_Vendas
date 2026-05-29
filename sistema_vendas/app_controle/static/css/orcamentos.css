@@ -16,6 +16,9 @@
 .btn-detalhes { color: #007bff; }
 .btn-detalhes:hover { color: #0056b3; }
 
+.btn-editar { color: #fd7e14; }
+.btn-editar:hover { color: #c96a00; }
+
 .btn-pdf { color: #6c757d; }
 .btn-pdf:hover { color: #495057; }
 

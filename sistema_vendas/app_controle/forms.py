@@ -3,6 +3,8 @@
 Forms para validação de dados
 """
 
+import re
+
 from django import forms
 from django.core.exceptions import ValidationError
 from .models import Loja, Cliente
@@ -217,8 +219,9 @@ class ClienteForm(forms.ModelForm):
             }),
             'cpf': forms.TextInput(attrs={
                 'class': 'form-control',
-                'placeholder': '000.000.000-00',
-                'maxlength': '14'
+                'placeholder': '000.000.000-00 ou 00.000.000/0000-00',
+                'maxlength': '18',
+                'id': 'cli-doc'
             }),
             'telefone': forms.TextInput(attrs={
                 'class': 'form-control',
@@ -229,29 +232,34 @@ class ClienteForm(forms.ModelForm):
                 'placeholder': 'email@exemplo.com'
             }),
         }
-    
+
     def clean_cpf(self):
-        """Valida e formata CPF"""
-        cpf = self.cleaned_data.get('cpf')
-        
-        if not cpf:
-            raise ValidationError('CPF é obrigatório')
-        
-        # ✅ Usar ValidadorCPF
-        if not ValidadorCPF.validar(cpf):
-            raise ValidationError('CPF inválido')
-        
-        # ✅ Formatar automaticamente
-        cpf_formatado = ValidadorCPF.formatar(cpf)
-        
-        # Verificar duplicidade (exceto se for edição)
-        cliente_existente = Cliente.objects.filter(cpf=cpf_formatado)
-        
-        # Se estamos editando, excluir o próprio cliente da verificação
+        """Valida e formata CPF ou CNPJ"""
+        valor = self.cleaned_data.get('cpf')
+
+        if not valor:
+            raise ValidationError('CPF/CNPJ é obrigatório')
+
+        apenas_digitos = re.sub(r'\D', '', valor)
+
+        if len(apenas_digitos) == 11:
+            if not ValidadorCPF.validar(valor):
+                raise ValidationError('CPF inválido')
+            doc_formatado = ValidadorCPF.formatar(valor)
+        elif len(apenas_digitos) == 14:
+            if not ValidadorCNPJ.validar(valor):
+                raise ValidationError('CNPJ inválido')
+            doc_formatado = ValidadorCNPJ.formatar(valor)
+        else:
+            raise ValidationError(
+                'CPF/CNPJ inválido. Informe um CPF (11 dígitos) ou CNPJ (14 dígitos)'
+            )
+
+        cliente_existente = Cliente.objects.filter(cpf=doc_formatado)
         if self.instance and self.instance.pk:
             cliente_existente = cliente_existente.exclude(pk=self.instance.pk)
-        
+
         if cliente_existente.exists():
-            raise ValidationError('Este CPF já está cadastrado')
-        
-        return cpf_formatado
+            raise ValidationError('Este CPF/CNPJ já está cadastrado')
+
+        return doc_formatado

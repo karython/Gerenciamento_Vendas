@@ -269,6 +269,80 @@ def converter_orcamento_venda(request, orcamento_id):
     }, status=405)
 
 @AuthService.requer_login
+def editar_orcamento(request, orcamento_id):
+    """Abre orçamento existente para edição"""
+    try:
+        orcamento = Orcamento.objects.select_related(
+            'cliente', 'forma_pagamento'
+        ).prefetch_related('itens__produto').get(id=orcamento_id)
+    except Orcamento.DoesNotExist:
+        return HttpResponse('Orçamento não encontrado', status=404)
+
+    if orcamento.status == 'CONVERTIDO':
+        return HttpResponse('Orçamentos convertidos em venda não podem ser editados', status=403)
+
+    loja = AuthService.loja_logada(request)
+
+    # Serializar tudo via json.dumps para garantir ponto como separador decimal
+    # (evita que LANGUAGE_CODE=pt-br quebre o JS com vírgula)
+    orcamento_json = json.dumps({
+        'id': orcamento.id,
+        'clienteId': orcamento.cliente.id,
+        'formaPagamentoId': orcamento.forma_pagamento.id,
+        'parcelamento': orcamento.parcelamento or '',
+        'desconto': float(orcamento.desconto),
+        'frete': float(orcamento.frete),
+        'itensIniciais': [
+            {
+                'produto_id': item.produto.id,
+                'descricao': item.produto.descricao,
+                'quantidade': float(item.quantidade),
+                'valor_unitario': float(item.preco_unitario),
+                'valor_total': float(item.total),
+            }
+            for item in orcamento.itens.all()
+        ],
+    })
+
+    return render(request, 'orcamentos/editar_orcamento.html', {
+        'loja': loja,
+        'orcamento': orcamento,
+        'orcamento_json': orcamento_json,
+    })
+
+
+@AuthService.requer_login
+def salvar_edicao_orcamento(request, orcamento_id):
+    """Salva as alterações de um orçamento via AJAX"""
+    if request.method != 'POST':
+        return JsonResponse({'success': False, 'message': 'Método não permitido'}, status=405)
+
+    try:
+        dados = json.loads(request.body)
+
+        subtotal = sum(item.get('valor_total', 0) for item in dados.get('itens', []))
+        desconto = float(dados.get('desconto', 0))
+        frete = float(dados.get('frete', 0))
+        total = subtotal - desconto + frete
+
+        dados['subtotal'] = subtotal
+        dados['frete'] = frete
+        dados['total'] = total
+
+        orcamento = OrcamentoService.atualizar_orcamento(orcamento_id, dados)
+
+        return JsonResponse({
+            'success': True,
+            'message': 'Orçamento atualizado com sucesso!',
+            'orcamento_id': orcamento.id,
+        })
+    except ValueError as e:
+        return JsonResponse({'success': False, 'message': str(e)}, status=400)
+    except Exception as e:
+        return JsonResponse({'success': False, 'message': f'Erro ao salvar orçamento: {str(e)}'}, status=500)
+
+
+@AuthService.requer_login
 def gerar_pdf_orcamento(request, orcamento_id):
     """Gera PDF do orçamento"""
     try:

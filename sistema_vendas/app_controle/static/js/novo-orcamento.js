@@ -257,8 +257,11 @@ function adicionarItem() {
     const isService = hidden.dataset.isService === 'true';
 
     if (!isService && quantidade > estoque) {
-        alert(`Estoque insuficiente! Disponível: ${estoque} unidades`);
-        return;
+        const confirmar = confirm(
+            `Atenção: estoque disponível é ${estoque} unidade(s).\n` +
+            `Orçamentos não dão baixa no estoque — deseja adicionar mesmo assim?`
+        );
+        if (!confirmar) return;
     }
 
     const itemExistente = itensOrcamento.find(item => item.produto_id === parseInt(produtoId));

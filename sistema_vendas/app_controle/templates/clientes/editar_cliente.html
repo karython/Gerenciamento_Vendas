@@ -34,48 +34,30 @@
         </div>
         
         <hr style="margin: 20px 0; border: 0; border-top: 1px solid var(--cor-borda);">
-        
-        {% if cliente.enderecos.first %}
+
         <div class="form-group">
             <label for="cli-endereco">Endereço</label>
-            <input type="text" id="cli-endereco" name="endereco" class="form-control" value="{{ cliente.enderecos.first.logradouro }}" placeholder="Rua, Número, Bairro...">
+            <input type="text" id="cli-endereco" name="logradouro" class="form-control"
+                   value="{{ endereco.logradouro|default:'' }}" placeholder="Rua, Número, Bairro...">
         </div>
-        
+
         <div class="form-row">
             <div class="form-group" style="flex: 2;">
                 <label for="cli-cidade">Cidade</label>
-                <input type="text" id="cli-cidade" name="cidade" class="form-control" value="{{ cliente.enderecos.first.cidade.nome }}">
+                <input type="text" id="cli-cidade" name="cidade" class="form-control"
+                       value="{{ endereco.cidade.nome|default:'' }}">
             </div>
             <div class="form-group" style="flex: 1;">
                 <label for="cli-estado">Estado</label>
-                <input type="text" id="cli-estado" name="estado" class="form-control" value="{{ cliente.enderecos.first.cidade.uf.sigla }}" maxlength="2">
+                <input type="text" id="cli-estado" name="estado" class="form-control"
+                       value="{{ endereco.cidade.uf.sigla|default:'' }}" maxlength="2" placeholder="SP">
             </div>
             <div class="form-group" style="flex: 1;">
                 <label for="cli-cep">CEP</label>
-                <input type="text" id="cli-cep" name="cep" class="form-control" value="{{ cliente.enderecos.first.cep }}">
+                <input type="text" id="cli-cep" name="cep" class="form-control"
+                       value="{{ endereco.cep|default:'' }}" placeholder="00000-000">
             </div>
         </div>
-        {% else %}
-        <div class="form-group">
-            <label for="cli-endereco">Endereço</label>
-            <input type="text" id="cli-endereco" name="endereco" class="form-control" placeholder="Rua, Número, Bairro...">
-        </div>
-        
-        <div class="form-row">
-            <div class="form-group" style="flex: 2;">
-                <label for="cli-cidade">Cidade</label>
-                <input type="text" id="cli-cidade" name="cidade" class="form-control">
-            </div>
-            <div class="form-group" style="flex: 1;">
-                <label for="cli-estado">Estado</label>
-                <input type="text" id="cli-estado" name="estado" class="form-control" maxlength="2" placeholder="DF">
-            </div>
-            <div class="form-group" style="flex: 1;">
-                <label for="cli-cep">CEP</label>
-                <input type="text" id="cli-cep" name="cep" class="form-control">
-            </div>
-        </div>
-        {% endif %}
         
         <div style="display: flex; gap: 10px; margin-top: 20px;">
             <button type="submit" class="btn btn-primary">Salvar Alterações</button>
@@ -100,4 +82,28 @@
     background-color: #5a6268;
 }
 </style>
+
+<script>
+function aplicarMascaraDocumento(input) {
+    let v = input.value.replace(/\D/g, '').slice(0, 14);
+    if (v.length <= 11) {
+        v = v.replace(/(\d{3})(\d)/, '$1.$2');
+        v = v.replace(/(\d{3})(\d)/, '$1.$2');
+        v = v.replace(/(\d{3})(\d{1,2})$/, '$1-$2');
+    } else {
+        v = v.replace(/(\d{2})(\d)/, '$1.$2');
+        v = v.replace(/(\d{3})(\d)/, '$1.$2');
+        v = v.replace(/(\d{3})(\d)/, '$1/$2');
+        v = v.replace(/(\d{4})(\d{1,2})$/, '$1-$2');
+    }
+    input.value = v;
+}
+
+document.addEventListener('DOMContentLoaded', function() {
+    const docInput = document.getElementById('cli-doc');
+    if (docInput) {
+        docInput.addEventListener('input', function() { aplicarMascaraDocumento(this); });
+    }
+});
+</script>
 {% endblock %}

@@ -1,147 +1,355 @@
-/* Dashboard Styles */
+/* ── Dashboard Styles ─────────────────────────────────────────────────────── */
 
-/* Layout Geral */
 .dashboard-container {
     display: flex;
     flex-direction: column;
-    gap: 25px;
-    max-width: 1200px;
+    gap: 22px;
+    max-width: 1280px;
     margin: 0 auto;
 }
 
-.header-dashboard {
+/* ── Cabeçalho ────────────────────────────────────────────────────────────── */
+
+.dash-header {
     display: flex;
     justify-content: space-between;
     align-items: flex-end;
-    margin-bottom: 10px;
+    flex-wrap: wrap;
+    gap: 10px;
 }
 
-.header-dashboard h1 {
-    font-size: 1.8rem;
-    color: #2c3e50;
+.dash-header h1 {
+    font-size: 1.75rem;
+    color: #1a202c;
     margin: 0;
+    font-weight: 700;
 }
 
-.subtitle {
-    color: #7f8c8d;
-    margin: 5px 0 0 0;
-    font-size: 0.95rem;
-}
-
-.date-badge {
-    background: #fff;
-    padding: 8px 15px;
-    border-radius: 20px;
-    box-shadow: 0 2px 5px rgba(0,0,0,0.05);
-    color: #7f8c8d;
+.dash-subtitle {
+    color: #718096;
+    margin: 4px 0 0;
     font-size: 0.9rem;
+}
+
+.dash-header-right {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.periodo-label {
+    background: #fff;
+    border: 1px solid #e2e8f0;
+    padding: 6px 14px;
+    border-radius: 20px;
+    font-size: 0.82rem;
+    color: #4a5568;
     font-weight: 500;
 }
 
-/* Grid de Estatísticas */
+/* ── Barra de Filtros ─────────────────────────────────────────────────────── */
+
+.filtros-bar {
+    background: #fff;
+    border-radius: 12px;
+    padding: 14px 20px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 14px;
+    box-shadow: 0 1px 8px rgba(0,0,0,0.05);
+    border: 1px solid #f0f4f8;
+}
+
+.filtros-periodos {
+    display: flex;
+    gap: 6px;
+    flex-wrap: wrap;
+}
+
+.btn-periodo {
+    padding: 7px 14px;
+    border: 1px solid #e2e8f0;
+    border-radius: 8px;
+    background: #f7fafc;
+    color: #4a5568;
+    font-size: 0.82rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.15s;
+}
+
+.btn-periodo:hover {
+    background: #edf2f7;
+    border-color: #cbd5e0;
+}
+
+.btn-periodo.active {
+    background: #27ae60;
+    border-color: #27ae60;
+    color: #fff;
+}
+
+.filtros-direita {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    flex-wrap: wrap;
+}
+
+.filtro-datas {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+}
+
+.input-data-filtro {
+    padding: 7px 10px;
+    border: 1px solid #e2e8f0;
+    border-radius: 8px;
+    font-size: 0.83rem;
+    color: #2d3748;
+    background: #f7fafc;
+    outline: none;
+}
+
+.input-data-filtro:focus {
+    border-color: #27ae60;
+    background: #fff;
+}
+
+.filtro-sep {
+    color: #a0aec0;
+    font-size: 0.85rem;
+}
+
+.btn-aplicar {
+    padding: 7px 14px;
+    background: #27ae60;
+    color: #fff;
+    border: none;
+    border-radius: 8px;
+    font-size: 0.82rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background 0.15s;
+}
+
+.btn-aplicar:hover { background: #219150; }
+
+.select-filtro {
+    padding: 7px 12px;
+    border: 1px solid #e2e8f0;
+    border-radius: 8px;
+    font-size: 0.83rem;
+    color: #2d3748;
+    background: #f7fafc;
+    outline: none;
+    min-width: 190px;
+    cursor: pointer;
+}
+
+.select-filtro:focus { border-color: #27ae60; background: #fff; }
+
+/* ── KPI Cards ────────────────────────────────────────────────────────────── */
+
 .stats-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
-    gap: 20px;
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    gap: 18px;
 }
 
 .stat-card {
-    background: white;
-    border-radius: 12px;
+    background: #fff;
+    border-radius: 14px;
     padding: 20px;
     display: flex;
     align-items: center;
-    gap: 20px;
-    box-shadow: 0 4px 15px rgba(0,0,0,0.03);
-    transition: transform 0.2s ease;
-    border: 1px solid rgba(0,0,0,0.02);
+    gap: 18px;
+    box-shadow: 0 2px 12px rgba(0,0,0,0.04);
+    border: 1px solid #f0f4f8;
+    transition: transform 0.2s, box-shadow 0.2s;
 }
 
 .stat-card:hover {
-    transform: translateY(-5px);
+    transform: translateY(-3px);
+    box-shadow: 0 6px 20px rgba(0,0,0,0.08);
 }
 
 .stat-icon {
-    width: 60px;
-    height: 60px;
+    width: 56px;
+    height: 56px;
     border-radius: 12px;
     display: flex;
     align-items: center;
     justify-content: center;
-    font-size: 1.5rem;
+    font-size: 1.4rem;
     flex-shrink: 0;
 }
 
-.icon-blue { background-color: #e3f2fd; color: #1976d2; }
-.icon-green { background-color: #e8f5e9; color: #2e7d32; }
-.icon-orange { background-color: #fff3e0; color: #ef6c00; }
-.icon-purple { background-color: #f3e5f5; color: #7b1fa2; }
+.icon-blue   { background: #ebf4ff; color: #2b6cb0; }
+.icon-green  { background: #e6ffed; color: #276749; }
+.icon-orange { background: #fffaf0; color: #c05621; }
+.icon-purple { background: #faf5ff; color: #6b46c1; }
 
 .stat-info h3 {
-    margin: 0;
-    font-size: 0.85rem;
-    color: #95a5a6;
+    margin: 0 0 2px;
+    font-size: 0.78rem;
+    color: #a0aec0;
     text-transform: uppercase;
-    letter-spacing: 0.5px;
+    letter-spacing: 0.6px;
     font-weight: 600;
 }
 
 .stat-info .valor {
-    font-size: 1.5rem;
+    font-size: 1.45rem;
     font-weight: 700;
-    color: #2c3e50;
-    margin: 5px 0;
+    color: #1a202c;
+    margin: 2px 0;
+    min-height: 1.6rem;
 }
 
 .stat-desc {
-    font-size: 0.8rem;
-    color: #bdc3c7;
+    font-size: 0.76rem;
+    color: #cbd5e0;
 }
 
-/* Container dos Gráficos */
-.charts-container {
-    display: flex;
-    flex-direction: column;
-    gap: 30px;
+/* ── Gráficos ─────────────────────────────────────────────────────────────── */
+
+.chart-full { width: 100%; }
+
+.charts-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 22px;
+}
+
+@media (max-width: 860px) {
+    .charts-row { grid-template-columns: 1fr; }
 }
 
 .chart-card {
-    background: white;
-    border-radius: 12px;
-    padding: 25px;
-    box-shadow: 0 4px 15px rgba(0,0,0,0.03);
-    width: 100%;
+    background: #fff;
+    border-radius: 14px;
+    padding: 22px 24px;
+    box-shadow: 0 2px 12px rgba(0,0,0,0.04);
+    border: 1px solid #f0f4f8;
 }
 
 .chart-header {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    margin-bottom: 25px;
-    border-bottom: 1px solid #f0f0f0;
-    padding-bottom: 15px;
+    margin-bottom: 18px;
+    padding-bottom: 14px;
+    border-bottom: 1px solid #f7fafc;
+    flex-wrap: wrap;
+    gap: 10px;
 }
 
 .chart-header h3 {
     margin: 0;
-    font-size: 1.1rem;
-    color: #34495e;
+    font-size: 1rem;
+    color: #2d3748;
     display: flex;
     align-items: center;
-    gap: 10px;
+    gap: 8px;
+    font-weight: 600;
 }
 
 .chart-header span {
-    font-size: 0.8rem;
-    color: #95a5a6;
-    background: #f8f9fa;
+    font-size: 0.78rem;
+    color: #a0aec0;
+    background: #f7fafc;
     padding: 4px 10px;
-    border-radius: 15px;
+    border-radius: 12px;
+}
+
+.chart-header-right {
+    display: flex;
+    gap: 6px;
+}
+
+.btn-chart-toggle {
+    padding: 5px 12px;
+    border: 1px solid #e2e8f0;
+    border-radius: 8px;
+    background: #f7fafc;
+    color: #4a5568;
+    font-size: 0.78rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.15s;
+}
+
+.btn-chart-toggle.active {
+    background: #ebf4ff;
+    border-color: #90cdf4;
+    color: #2b6cb0;
 }
 
 .chart-body {
     position: relative;
-    height: 400px;
+    height: 340px;
     width: 100%;
 }
 
+.chart-body-sm { height: 310px; }
+
+/* ── Loading spinner ──────────────────────────────────────────────────────── */
+
+.chart-loading {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: rgba(255,255,255,0.7);
+    z-index: 5;
+    border-radius: 8px;
+}
+
+.spinner {
+    width: 36px;
+    height: 36px;
+    border: 3px solid #e2e8f0;
+    border-top-color: #27ae60;
+    border-radius: 50%;
+    animation: spin 0.7s linear infinite;
+}
+
+@keyframes spin { to { transform: rotate(360deg); } }
+
+/* ── Vazio por gráfico ────────────────────────────────────────────────────── */
+
+.grafico-vazio {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #a0aec0;
+    font-size: 0.9rem;
+    font-style: italic;
+}
+
+/* ── Estado vazio global ──────────────────────────────────────────────────── */
+
+.dash-vazio {
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 60px 20px;
+    color: #a0aec0;
+    font-size: 1rem;
+    gap: 14px;
+}
+
+.dash-vazio i {
+    font-size: 3rem;
+    color: #e2e8f0;
+}
+
+.dash-vazio p { margin: 0; }

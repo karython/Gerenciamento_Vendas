@@ -45,6 +45,7 @@ urlpatterns = [
     # DASHBOARD
     # ============================================
     path('dashboard/', dashboard_views.dashboard, name='dashboard'),
+    path('dashboard/dados/', dashboard_views.dashboard_api, name='dashboard_api'),
     
     # ============================================
     # CLIENTES

@@ -4,100 +4,145 @@
 {% block title %}Dashboard{% endblock %}
 
 {% block dashboard_content %}
-<link rel="stylesheet" href="{% static 'css/dashboard.css' %}">
+<link rel="stylesheet" href="{% static 'css/dashboard.css' %}?v=2">
 
 <div class="dashboard-container">
-    
-    <div class="header-dashboard">
+
+    <!-- Cabeçalho -->
+    <div class="dash-header">
         <div>
             <h1>Visão Geral</h1>
-            <p class="subtitle">Bem-vindo(a), <strong>{{ loja.nome }}</strong>. Aqui estão seus resultados.</p>
+            <p class="dash-subtitle">Bem-vindo(a), <strong>{{ loja.nome }}</strong></p>
         </div>
-        <div class="date-badge">
-            <i class="far fa-calendar-alt"></i> Hoje: {% now "d/m/Y" %}
+        <div class="dash-header-right">
+            <span class="periodo-label" id="periodo-label">Carregando...</span>
         </div>
     </div>
 
+    <!-- Barra de Filtros -->
+    <div class="filtros-bar">
+        <div class="filtros-periodos">
+            <button class="btn-periodo" data-periodo="7">7 dias</button>
+            <button class="btn-periodo" data-periodo="30">30 dias</button>
+            <button class="btn-periodo active" data-periodo="90">90 dias</button>
+            <button class="btn-periodo" data-periodo="mes">Este mês</button>
+            <button class="btn-periodo" data-periodo="365">1 ano</button>
+            <button class="btn-periodo" data-periodo="personalizado">Personalizado</button>
+        </div>
+
+        <div class="filtros-direita">
+            <div class="filtro-datas" id="filtro-datas" style="display:none;">
+                <input type="date" id="data-inicio" class="input-data-filtro" title="Data inicial">
+                <span class="filtro-sep">—</span>
+                <input type="date" id="data-fim" class="input-data-filtro" title="Data final">
+                <button class="btn-aplicar" id="btn-aplicar-datas">Aplicar</button>
+            </div>
+
+            <div class="filtro-produto">
+                <select id="filtro-produto" class="select-filtro">
+                    <option value="">Todos os produtos</option>
+                    {% for produto in produtos %}
+                    <option value="{{ produto.id }}">{{ produto.descricao }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+        </div>
+    </div>
+
+    <!-- KPI Cards -->
     <div class="stats-grid">
         <div class="stat-card">
-            <div class="stat-icon icon-blue">
-                <i class="fas fa-file-invoice-dollar"></i>
-            </div>
+            <div class="stat-icon icon-blue"><i class="fas fa-file-invoice-dollar"></i></div>
             <div class="stat-info">
-                <h3>Receita Bruta (Mês)</h3>
-                <div class="valor">R$ {{ receita_bruta }}</div>
-                <span class="stat-desc">Faturamento total</span>
+                <h3>Receita Bruta</h3>
+                <div class="valor" id="kpi-receita-bruta">—</div>
+                <span class="stat-desc">Faturamento total do período</span>
             </div>
         </div>
-
         <div class="stat-card">
-            <div class="stat-icon icon-green">
-                <i class="fas fa-wallet"></i>
-            </div>
+            <div class="stat-icon icon-green"><i class="fas fa-wallet"></i></div>
             <div class="stat-info">
-                <h3>Receita Líquida (Mês)</h3>
-                <div class="valor">R$ {{ receita_liquida }}</div>
-                <span class="stat-desc">Lucro estimado</span>
+                <h3>Receita Líquida</h3>
+                <div class="valor" id="kpi-receita-liquida">—</div>
+                <span class="stat-desc">Após descontos e frete</span>
             </div>
         </div>
-
         <div class="stat-card">
-            <div class="stat-icon icon-orange">
-                <i class="fas fa-shopping-cart"></i>
-            </div>
+            <div class="stat-icon icon-orange"><i class="fas fa-shopping-cart"></i></div>
             <div class="stat-info">
-                <h3>Vendas (Mês)</h3>
-                <div class="valor">{{ total_vendas }}</div>
-                <span class="stat-desc">Pedidos realizados</span>
+                <h3>Total de Vendas</h3>
+                <div class="valor" id="kpi-total-vendas">—</div>
+                <span class="stat-desc">Pedidos no período</span>
             </div>
         </div>
-
         <div class="stat-card">
-            <div class="stat-icon icon-purple">
-                <i class="fas fa-boxes"></i>
-            </div>
+            <div class="stat-icon icon-purple"><i class="fas fa-tag"></i></div>
             <div class="stat-info">
-                <h3>Estoque Total</h3>
-                <div class="valor">{{ total_estoque }}</div>
-                <span class="stat-desc">Itens disponíveis</span>
+                <h3>Ticket Médio</h3>
+                <div class="valor" id="kpi-ticket-medio">—</div>
+                <span class="stat-desc">Valor médio por venda</span>
             </div>
         </div>
     </div>
 
-    <div class="charts-container">
-        
+    <!-- Gráfico: Vendas por Dia (linha, largura total) -->
+    <div class="card chart-card chart-full">
+        <div class="chart-header">
+            <h3><i class="fas fa-chart-line"></i> Desempenho de Vendas</h3>
+            <div class="chart-header-right">
+                <button class="btn-chart-toggle active" data-metric="qtd">Qtd. Vendas</button>
+                <button class="btn-chart-toggle" data-metric="receita">Receita</button>
+            </div>
+        </div>
+        <div class="chart-body" id="wrap-vendas-dia">
+            <div class="chart-loading"><div class="spinner"></div></div>
+            <canvas id="graficoVendasDia"></canvas>
+        </div>
+    </div>
+
+    <!-- Gráficos secundários: Top Produtos + Formas de Pagamento -->
+    <div class="charts-row">
+
         <div class="card chart-card">
             <div class="chart-header">
-                <h3><i class="fas fa-chart-line"></i> Desempenho de Vendas</h3>
-                <span>Últimos 30 dias</span>
+                <h3><i class="fas fa-trophy"></i> Top Produtos</h3>
+                <span>Por receita no período</span>
             </div>
-            <div class="chart-body">
-                <canvas id="graficoVendas"></canvas>
+            <div class="chart-body" id="wrap-top-produtos">
+                <div class="chart-loading"><div class="spinner"></div></div>
+                <canvas id="graficoTopProdutos"></canvas>
             </div>
         </div>
 
         <div class="card chart-card">
             <div class="chart-header">
-                <h3><i class="fas fa-chart-pie"></i> Composição Financeira</h3>
-                <span>Bruto vs. Líquido</span>
+                <h3><i class="fas fa-credit-card"></i> Formas de Pagamento</h3>
+                <span>Distribuição por receita</span>
             </div>
-            <div class="chart-body" style="height: 350px;">
-                <canvas id="graficoReceita"></canvas>
+            <div class="chart-body chart-body-sm" id="wrap-formas">
+                <div class="chart-loading"><div class="spinner"></div></div>
+                <canvas id="graficoFormas"></canvas>
             </div>
         </div>
 
     </div>
-    
-    <script id="datas-vendas-data" type="application/json">{{ datas_vendas_json }}</script>
-    <script id="valores-vendas-data" type="application/json">{{ valores_vendas_json }}</script>
-    <span id="receita-bruta" style="display:none;">{{ receita_bruta_30 }}</span>
-    <span id="receita-liquida" style="display:none;">{{ receita_liquida_30 }}</span>
+
+    <!-- Estado vazio global -->
+    <div id="dash-vazio" class="dash-vazio" style="display:none;">
+        <i class="fas fa-chart-bar"></i>
+        <p>Nenhuma venda encontrada no período selecionado.</p>
+    </div>
 
 </div>
 
 {% endblock %}
 
 {% block scripts %}
-<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-<script src="{% static 'js/charts-dashboard.js' %}"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<script>
+    window.dashboardUrls = {
+        api: "{% url 'dashboard_api' %}",
+    };
+</script>
+<script src="{% static 'js/charts-dashboard.js' %}?v=2"></script>
 {% endblock %}
